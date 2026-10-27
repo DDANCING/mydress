@@ -10,7 +10,7 @@ import { db } from "@/lib/db";
 
 const NavBar = async () => {
   const user = await auth();
-  const userId = user?.user.id; 
+  const userId = user?.user?.id; 
 
   if(!userId) {
     redirect("/auth/login")

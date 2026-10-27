@@ -25,7 +25,7 @@ const page = async ({ params }: CategoryIdPageProps) => {
   const { productId } = await params;
 
   const user = await auth();
-  const userId = user?.user.id;
+  const userId = user?.user?.id;
 
   const wishlistItems = await db.wishlist.findMany({
     where: {

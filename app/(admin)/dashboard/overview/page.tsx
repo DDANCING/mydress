@@ -34,7 +34,7 @@ async function refreshHistoricalCache() {
 export default async function OverviewPage() {
    const user = await auth();
   
-    if (user?.user.role === "SELLER") {
+    if (user?.user?.role === "SELLER") {
       redirect('/dashboard/contracts');
     }
   // Fetch cached data with timestamp - this will be cached for 24 hours

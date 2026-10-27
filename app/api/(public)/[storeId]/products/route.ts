@@ -10,7 +10,7 @@ export async function POST(
 ) {
   try {
     const user = await auth();
-    const userId = user?.user.id;
+    const userId = user?.user?.id;
     const body = await req.json();
     const { storeId } = await context.params;
 

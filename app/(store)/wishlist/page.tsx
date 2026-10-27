@@ -7,7 +7,7 @@ import { auth } from "@/auth";
 
 export default async function ProductsPage() {
 const user = await auth();
-const userId = user?.user.id;
+const userId = user?.user?.id;
 
 const Products = await db.product.findMany({
       where: {

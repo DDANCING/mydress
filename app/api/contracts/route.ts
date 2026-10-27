@@ -7,7 +7,7 @@ import { Decimal } from "@prisma/client/runtime/library";
 export async function GET(request: NextRequest) {
   try {
     const user = await auth();
-    const userId = user?.user.id;
+    const userId = user?.user?.id;
     
     if (!userId) {
       return new NextResponse("Não autorizado", { status: 401 });
@@ -90,7 +90,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const user = await auth();
-    const userId = user?.user.id;
+    const userId = user?.user?.id;
 
     if (!userId) {
       return new NextResponse("Não autorizado", { status: 401 });

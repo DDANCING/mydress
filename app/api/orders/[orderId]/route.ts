@@ -66,7 +66,7 @@ export async function PATCH(
 ) {
   try {
     const session = await auth();
-    if (!session?.user.id) {
+    if (!session?.user?.id) {
       return new NextResponse("Unauthenticated", { status: 401 });
     }
 
@@ -217,7 +217,7 @@ export async function DELETE(
 ) {
   try {
     const session = await auth();
-    if (!session?.user.id) {
+    if (!session?.user?.id) {
       return new NextResponse("Unauthenticated", { status: 401 });
     }
 

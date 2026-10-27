@@ -33,7 +33,7 @@ export async function PATCH(
 ) {
   try {
     const user = await auth();
-    if (!user?.user.id) return new NextResponse("Unauthenticated", { status: 401 });
+    if (!user?.user?.id) return new NextResponse("Unauthenticated", { status: 401 });
 
     const { outFinanceColumnId } = await context.params;
     const body = await req.json();
@@ -78,7 +78,7 @@ export async function DELETE(
 ) {
   try {
     const user = await auth();
-    const userId = user?.user.id;
+    const userId = user?.user?.id;
     if (!userId) {
       return new NextResponse("Unauthorized", { status: 401 });
     }

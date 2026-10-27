@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 export default async function AddressPage() {
   const user = await auth();
 
-  const userEmail = user?.user.email;
+  const userEmail = user?.user?.email;
   if (!userEmail) {
     return redirect("/login");
   }

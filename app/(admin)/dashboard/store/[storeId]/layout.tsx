@@ -13,7 +13,7 @@ export const dynamic = 'force-dynamic';
 
 export default async function Dashboard({children, params}: DashboardType) {
     const user = await auth();
-    const userId = user?.user.id;
+    const userId = user?.user?.id;
     const { storeId } = await params;
 
     if (!userId) {

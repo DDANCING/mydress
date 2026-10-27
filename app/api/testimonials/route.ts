@@ -5,7 +5,7 @@ import { NextResponse } from "next/server"
 export async function GET(req: Request) {
   try {
     const user = await auth();
-    const userId = user?.user.id;
+    const userId = user?.user?.id;
 
     const { searchParams } = new URL(req.url);
     const productId = searchParams.get("productId");
@@ -40,7 +40,7 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const user = await auth();
-    const userId = user?.user.id;
+    const userId = user?.user?.id;
     const body = await req.json();
 
     const { stars, productId, message } = body;

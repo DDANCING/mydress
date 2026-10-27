@@ -15,8 +15,8 @@ interface Props {
  
 const ProfileLayout = async ({ children }: Props) => {
   const session = await auth();
-  const userEmail = session?.user.email;
-  const userName = session?.user.name;
+  const userEmail = session?.user?.email;
+  const userName = session?.user?.name;
 
   if (!userEmail) {
     return notFound();
@@ -88,8 +88,8 @@ const ProfileLayout = async ({ children }: Props) => {
   }
 
 
-  const buyerName = buyerWithOrders?.fullName || session?.user.name || "";
-  const buyerEmailSafe = buyerWithOrders?.email || session?.user.email || "";
+  const buyerName = buyerWithOrders?.fullName || session?.user?.name || "";
+  const buyerEmailSafe = buyerWithOrders?.email || session?.user?.email || "";
   
 
 

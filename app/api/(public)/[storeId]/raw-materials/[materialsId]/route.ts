@@ -43,7 +43,7 @@ export async function PATCH(
 ) {
   try {
     const user = await auth();
-    const userId = user?.user.id;
+    const userId = user?.user?.id;
     const body = await req.json();
     const { storeId, materialsId } = await context.params;
 
@@ -144,7 +144,7 @@ export async function DELETE(
 ) {
   try {
     const user = await auth();
-    const userId = user?.user.id;
+    const userId = user?.user?.id;
     const { storeId, materialsId } = await context.params;
 
     if (!userId) {

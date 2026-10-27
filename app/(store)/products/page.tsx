@@ -15,7 +15,7 @@ export default async function ProductsPage(props: any) {
     : props.searchParams;
 
   const user = await auth();
-  const userId = user?.user.id;
+  const userId = user?.user?.id;
 
   const nameParam = searchParams?.name;
   const nameFilter = typeof nameParam === "string"

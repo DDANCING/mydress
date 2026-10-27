@@ -15,8 +15,8 @@ interface Props {
 
 const Layout = async ({ children }: Props) => {
   const session = await auth();
-  const userId = session?.user.id;
-  const role = session?.user.role;
+  const userId = session?.user?.id;
+  const role = session?.user?.role;
 
   return (
     <SessionProvider session={session}>

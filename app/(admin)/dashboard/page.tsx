@@ -17,7 +17,7 @@ import { redirect } from "next/navigation";
 async function DashboardStorePage() {
   const user = await auth();
 
-  if (user?.user.role === "SELLER") {
+  if (user?.user?.role === "SELLER") {
     redirect('/dashboard/contracts');
   }
   

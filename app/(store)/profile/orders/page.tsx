@@ -6,9 +6,9 @@ import { redirect } from "next/navigation";
 
 const OrdersPage = async () => {
   const session = await auth();
-  const userEmail = session?.user.email;
+  const userEmail = session?.user?.email;
 
-  const userId = session?.user.id;
+  const userId = session?.user?.id;
 
   if (!userId || !userEmail) {
     return redirect("/login?callbackUrl=/profile/orders");
@@ -77,7 +77,7 @@ const OrdersPage = async () => {
   }));
 }
 
-  const buyerName = buyerWithOrders?.fullName || session?.user.name || "";
+  const buyerName = buyerWithOrders?.fullName || session?.user?.name || "";
 
   const safeOrders = serializeOrders(buyerWithOrders?.orders || []);
 

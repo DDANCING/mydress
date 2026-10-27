@@ -5,7 +5,7 @@ import { db } from "@/lib/db";
 export async function GET() {
   try {
     const user = await auth();
-    const userId = user?.user.id;
+    const userId = user?.user?.id;
 
     if (!userId) {
       return new NextResponse("Não autorizado", { status: 401 });

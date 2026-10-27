@@ -67,7 +67,7 @@ export default async function Home() {
 
   const wishlistItems = await db.wishlist.findMany({
     where: {
-      userId: user?.user.id,
+      userId: user?.user?.id,
       productId: { in: billboardProductIds },
     },
   });

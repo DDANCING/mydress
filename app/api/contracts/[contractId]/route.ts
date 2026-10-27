@@ -13,7 +13,7 @@ export async function GET(
   try {
     const { contractId } = await context.params;
     const user = await auth();
-    const userId = user?.user.id;
+    const userId = user?.user?.id;
 
     if (!userId) {
       return new NextResponse("Não autorizado", { status: 401 });
@@ -84,7 +84,7 @@ export async function PATCH(
   try {
     const { contractId } = await context.params;
     const user = await auth();
-    const userId = user?.user.id;
+    const userId = user?.user?.id;
 
     if (!userId) {
       return new NextResponse("Não autorizado", { status: 401 });
@@ -126,7 +126,7 @@ export async function PATCH(
     // Validar mudança de status: não permitir mudar de CONFIRMED para PENDING, exceto ADMIN ou OWNER
     const isAttemptingDowngrade = existingContract.status === "CONFIRMED" && status === "PENDING";
     if (isAttemptingDowngrade) {
-      const userRole = user?.user.role;
+      const userRole = user?.user?.role;
       // Apenas ADMIN e OWNER podem fazer downgrade de CONFIRMED para PENDING
       const canDowngrade = userRole === "ADMIN" || userRole === "OWNER";
       
@@ -338,7 +338,7 @@ export async function DELETE(
   try {
     const { contractId } = await context.params;
     const user = await auth();
-    const userId = user?.user.id;
+    const userId = user?.user?.id;
 
     if (!userId) {
       return new NextResponse("Não autorizado", { status: 401 });

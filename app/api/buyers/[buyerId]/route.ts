@@ -37,7 +37,7 @@ export async function PATCH(
 ) {
   try {
     const user = await auth();
-    if (!user?.user.id) return new NextResponse("Unauthenticated", { status: 401 });
+    if (!user?.user?.id) return new NextResponse("Unauthenticated", { status: 401 });
 
     const { buyerId } = await context.params;
     const body = await req.json();

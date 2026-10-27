@@ -27,7 +27,7 @@ export default async function DashboardLayout({
   children,
 }: LayoutComponentProps) { 
   const user = await auth();
-  const userId = user?.user.id;
+  const userId = user?.user?.id;
 
   if (!userId) {
     redirect("/auth/login");
