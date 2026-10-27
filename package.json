@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
+    "dev": "bun scripts/run-next.mjs dev",
+    "build": "bun scripts/run-next.mjs build",
+    "start": "bun scripts/run-next.mjs start",
     "lint": "next lint",
     "postinstall": "prisma generate"
   },

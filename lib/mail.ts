@@ -1,7 +1,6 @@
 import { siteConfig } from "@/lib/site-config";
-import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+import { resend } from "@/lib/resend";
 
 export const sendTwoFactorTokenEmail = async (
   email: string,
