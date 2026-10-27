@@ -1,0 +1,571 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                    String                 @id @default(cuid())
+  name                  String?
+  email                 String?                @unique
+  emailVerified         DateTime?
+  image                 String?
+  password              String?
+  role                  UserRole               @default(USER)
+  isTwoFactorEnabled    Boolean                @default(false)
+  bio                   String?
+  accounts              Account[]
+  seller                Seller?
+  stores                Store[]
+  twoFactorConfirmation TwoFactorConfirmation?
+  wishlists             Wishlist[]
+  testimonials          Testimonial[]
+}
+
+
+
+model Seller {
+  id        String     @id @default(cuid())
+  userId    String     @unique
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  document  String?    @unique @db.VarChar(18)
+  name      String
+  isActive  Boolean    @default(true)
+  contracts Contract[]
+  schedules Schedule[]
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Buyer {
+  id           String     @id @default(uuid())
+  fullName     String
+  IsEffected   Boolean    @default(true)
+  document     String?    @unique @db.VarChar(18)
+  email        String?     @unique
+  phone        String?
+  address      String?
+  number       String?
+  complement   String?
+  neighborhood String?
+  city         String?
+  state        String?
+  cep          String?    @db.VarChar(9)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  contracts    Contract[]
+  orders       Order[]
+  schedules    Schedule[]
+  invoices     Invoice[]
+}
+
+model PaymentMethod {
+  id               String            @id @default(uuid())
+  name             String
+  description      String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  contracts        Contract[]
+  contractPayments ContractPayment[]
+}
+
+model Contract {
+  id               String            @id @default(uuid())
+  type             ContractType
+  status           ContractStatus    @default(PENDING)
+  totalAmount      Decimal
+  deliveryDate     DateTime
+  eventDate        DateTime?
+  returnDate       DateTime?
+  buyerId          String
+  sellerId         String
+  paymentMethodId  String
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  discount         Decimal?          @default(0)
+  downPayment      Decimal?          @default(0)
+  notes            String?
+  haveNfe          Boolean          @default(false)
+  terms            String?
+  buyer            Buyer             @relation(fields: [buyerId], references: [id])
+  paymentMethod    PaymentMethod     @relation(fields: [paymentMethodId], references: [id])
+  seller           Seller            @relation(fields: [sellerId], references: [id])
+  contractItems    ContractItem[]
+  contractPayments ContractPayment[]
+  schedules        Schedule[]
+
+  @@index([type])
+  @@index([status])
+  @@index([buyerId])
+  @@index([sellerId])
+  @@index([paymentMethodId])
+}
+
+model ContractItem {
+  id         String   @id @default(uuid())
+  contractId String
+  productId  String
+  quantity   Int      @default(1)
+  unitPrice  Decimal
+  subtotal   Decimal
+  contract   Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  product    Product  @relation("ContractItemToProduct", fields: [productId], references: [id])
+
+  @@unique([contractId, productId])
+  @@index([contractId])
+  @@index([productId])
+}
+
+model Schedule {
+  id          String       @id @default(uuid())
+  startDate   DateTime
+  endDate     DateTime
+  type        ScheduleType
+  productId   String?
+  buyerId     String?
+  sellerId    String?
+  contractId  String?
+  orderId    String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  description String?
+  title       String?
+  tags        String[]     @default([])
+  buyer       Buyer?       @relation(fields: [buyerId], references: [id])
+  contract    Contract?    @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  order       Order?       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product     Product?     @relation(fields: [productId], references: [id])
+  seller      Seller?      @relation(fields: [sellerId], references: [id])
+
+  @@index([startDate, endDate])
+  @@index([type])
+  @@index([productId])
+  @@index([buyerId])
+  @@index([sellerId])
+  @@index([contractId])
+}
+
+model Store {
+  id         String      @id @default(uuid())
+  name       String
+  userId     String
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  billboards Billboard[] @relation("StoreToBillboard")
+  categories Category[]  @relation("StoreToCategory")
+  colors     Color[]     @relation("StoreToColor")
+  products   Product[]   @relation("StoreToProduct")
+  sizes      Size[]      @relation("StoreToSize")
+  user       User        @relation(fields: [userId], references: [id])
+}
+
+model Billboard {
+  id             String        @id @default(uuid())
+  storeId        String
+  label          String
+  subtitle       String?
+  category       String?
+  description    String?
+  imageUrl       String
+  callToActionId String?       @unique
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  callToAction   CallToAction? @relation(fields: [callToActionId], references: [id])
+  store          Store         @relation("StoreToBillboard", fields: [storeId], references: [id])
+  categories     Category[]
+
+  @@index([storeId])
+}
+
+model CallToAction {
+  id        String     @id @default(uuid())
+  text      String?
+  href      String?
+  billboard Billboard?
+}
+
+model Category {
+  id          String    @id @default(uuid())
+  storeId     String
+  billboardId String
+  name        String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  billboard   Billboard @relation(fields: [billboardId], references: [id])
+  store       Store     @relation("StoreToCategory", fields: [storeId], references: [id])
+  products    Product[] @relation("CategoryToProduct")
+
+  @@index([storeId])
+  @@index([billboardId])
+}
+
+model Size {
+  id        String    @id @default(uuid())
+  storeId   String
+  name      String
+  value     String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  products  Product[]
+  store     Store     @relation("StoreToSize", fields: [storeId], references: [id])
+
+  @@index([storeId])
+}
+
+model Color {
+  id        String    @id @default(uuid())
+  storeId   String
+  name      String
+  value     String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  store     Store     @relation("StoreToColor", fields: [storeId], references: [id])
+  products  Product[]
+
+  @@index([storeId])
+}
+
+model Product {
+  id            String         @id @default(uuid())
+  sku           String?        @unique
+  storeId       String
+  categoryId    String
+  name          String
+  price         Decimal
+  originalPrice Decimal?
+  rating        Int?
+  description   String?
+  reviewCount   Int?
+  isFeatured    Boolean        @default(false)
+  isArchived    Boolean        @default(false)
+  sizeId        String
+  colorId       String
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  siteVisible   Boolean        @default(false)
+  isOnlyRental  Boolean        @default(false)
+  rentalValue   Decimal?
+  contractItems ContractItem[] @relation("ContractItemToProduct")
+  images        Image[]
+  orderItems    OrderItem[]
+  category      Category       @relation("CategoryToProduct", fields: [categoryId], references: [id])
+  color         Color          @relation(fields: [colorId], references: [id])
+  size          Size           @relation(fields: [sizeId], references: [id])
+  store         Store          @relation("StoreToProduct", fields: [storeId], references: [id])
+  schedules     Schedule[]
+  wishlists     Wishlist[]
+  testimonials   Testimonial[]
+
+  @@index([storeId])
+  @@index([categoryId])
+  @@index([sizeId])
+  @@index([colorId])
+}
+
+// schema.prisma
+
+model RawMaterial {
+  id           String           @id @default(uuid())
+  name         String
+  category     MaterialCategory
+  
+  imageUrl     String?
+  color        String          
+  quantity     Float           
+  unit         MaterialUnit     
+  
+  // Controle administrativo
+  minStock     Float            @default(0) 
+  pricePerUnit Decimal?         @db.Decimal(10, 2) 
+  supplier     String?          
+
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  @@map("raw_materials")
+}
+
+// Enums para padronizar os dados no banco
+enum MaterialCategory {
+  TECIDO
+  LINHA
+  PEDRARIA
+  AVIAMENTO
+  OUTROS
+}
+
+enum MaterialUnit {
+  M     
+  CM    
+  KG   
+  G     
+  UN    
+  ROLO  
+}
+
+
+model Testimonial {
+  id        String   @id @default(uuid())
+  userId    String
+  productId String
+  stars     Int      // número de estrelas (ex: 1 a 5)
+  quote     String   // citação do usuário sobre o produto
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([productId])
+}
+
+model Image {
+  id        String   @id @default(uuid())
+  productId String
+  url       String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+}
+
+model Order {
+  id             String      @id @default(uuid())
+  buyerId        String
+  couponId       String?
+  shippingMethod String?
+  eventDate      DateTime?
+  shippingCost   Decimal?    @default(0)
+  shippingTime   Int?        
+  isPaid         Boolean     @default(false)
+  paymentMethod  String?
+  installments   Int?
+  trackingCode   String?
+  trackingUrl    String?
+  status         String?
+  totalAmount    Decimal?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  buyer          Buyer       @relation(fields: [buyerId], references: [id])
+  coupon         Coupon?     @relation("OrderCoupon", fields: [couponId], references: [id])
+  schedules      Schedule[]
+  orderItems     OrderItem[]
+
+  @@index([buyerId])
+  @@index([couponId])
+}
+
+model OrderItem {
+  id        String  @id @default(uuid())
+  orderId   String
+  productId String
+  type      ContractType @default(SALE)
+  quantity  Int     @default(1)
+  unitPrice Decimal
+  subtotal  Decimal
+  order     Order   @relation(fields: [orderId], references: [id])
+  product   Product @relation(fields: [productId], references: [id])
+
+  @@unique([orderId, productId])
+  @@index([orderId])
+  @@index([productId])
+}
+
+model Coupon {
+  id            String    @id @default(uuid())
+  code          String    @unique
+  discountType  String
+  discountValue Decimal
+  usageLimit    Int?
+  usedCount     Int       @default(0)
+  expiresAt     DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  orders        Order[]   @relation("OrderCoupon")
+}
+
+model Wishlist {
+  id        String   @id @default(uuid())
+  userId    String
+  productId String
+  createdAt DateTime @default(now())
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId])
+  @@index([userId])
+  @@index([productId])
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model VerificationToken {
+  id      String   @id @default(cuid())
+  email   String
+  token   String   @unique
+  expires DateTime
+
+  @@unique([email, token])
+}
+
+model PasswordResetToken {
+  id      String   @id @default(cuid())
+  email   String
+  token   String   @unique
+  expires DateTime
+
+  @@unique([email, token])
+}
+
+model TwoFactorToken {
+  id      String   @id @default(cuid())
+  email   String
+  token   String   @unique
+  expires DateTime
+
+  @@unique([email, token])
+}
+
+model TwoFactorConfirmation {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Visitor {
+  id        String   @id @default(uuid())
+  date      DateTime @unique
+  mobile    Int      @default(0)
+  web       Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model OutFinanceColumn {
+  id        String  @id @default(uuid())
+  name      String
+  data      DateTime
+  store     String
+  method    String
+  value     Decimal
+  createdAt DateTime @default(now())
+}
+
+model ContractPayment {
+  id                String        @id @default(uuid())
+  contractId        String
+  paymentMethodId   String
+  amount            Decimal
+  paymentDate       DateTime
+  description       String?
+  installmentNumber Int?
+  dueDate           DateTime?
+  isPaid            Boolean       @default(true)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  contract          Contract      @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  paymentMethod     PaymentMethod @relation(fields: [paymentMethodId], references: [id])
+
+  @@index([contractId])
+  @@index([paymentMethodId])
+  @@index([paymentDate])
+}
+
+model Invoice {
+  id                String      @id @default(uuid())
+  type              String?     @default("NFE") 
+  invoiceNumber     Int         @unique
+  invoiceCode       String      @unique
+  chaveNfe          String?    
+  buyerId           String?
+  sellerId          String?
+  amount            Decimal
+  nfeStatus         String?     @default("ACTIVE")
+  focusNfeRef       String?    
+  focusNfeStatus    String?     
+  originalInvoiceId String?     
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+  buyer             Buyer?      @relation(fields: [buyerId], references: [id])
+  supplier          Supplier?   @relation(fields: [sellerId], references: [id])
+  originalInvoice   Invoice?    @relation("InvoiceReturn", fields: [originalInvoiceId], references: [id])
+  returnInvoices    Invoice[]   @relation("InvoiceReturn")
+
+  @@index([buyerId])
+  @@index([sellerId])
+  @@index([chaveNfe])
+  @@index([focusNfeRef])
+}
+
+model Supplier {
+  id        String   @id @default(uuid())
+  name      String
+  document  String?
+  email     String?
+  phone     String?
+  address   String?
+  invoice   Invoice[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([document])
+}
+
+model MarketingExpense {
+  id          String   @id @default(uuid())
+  duration    Int
+  amount      Decimal  @db.Decimal(10, 2) 
+  platform    String  
+  campaign    String?  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+enum ContractType {
+  SALE
+  RENTAL
+  ClothingSALE
+  clothingRENTAL
+}
+
+enum ContractStatus {
+  PENDING
+  CONFIRMED
+  DELIVERED
+  RETURNED
+  CANCELED
+}
+
+enum ScheduleType {
+  PRODUCT_BLOCK
+  CLIENT_APPOINTMENT
+}
+
+enum UserRole {
+  ADMIN
+  USER
+  SELLER
+  OWNER
+}
+

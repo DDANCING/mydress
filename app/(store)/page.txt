@@ -1,0 +1,11 @@
+import { registerVisitor } from "@/actions/register-visitor";
+import ShiftingCountdown from "../../components/shifting-countdown";
+
+export default async function Home() {
+  await registerVisitor();
+  return (
+    <div className="space-y-10 pb-10 mt-25">
+      <ShiftingCountdown />
+    </div>
+  );
+}

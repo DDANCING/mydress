@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#fbf7f2">
+  <title>Sem conexão · My Dress Floripa</title>
+  <style>
+    :root {
+      --ivory: #fbf7f2;
+      --plum: #29161f;
+      --fuchsia: #b8196f;
+      --muted: #6f5a63;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 16px;
+      background: var(--ivory);
+      color: var(--plum);
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    }
+    main { max-width: 420px; text-align: center; }
+    .mark {
+      width: 96px;
+      height: 96px;
+      margin: 0 auto 28px;
+      background: var(--fuchsia);
+      -webkit-mask: url(/icons/shortcut-96.png) center / contain no-repeat;
+      mask: url(/icons/shortcut-96.png) center / contain no-repeat;
+    }
+    h1 {
+      font-family: "Bodoni Moda", Didot, "Bodoni 72", Georgia, serif;
+      font-weight: 400;
+      font-size: 2.4rem;
+      line-height: 1.05;
+      letter-spacing: -0.02em;
+      margin-bottom: 14px;
+    }
+    p { color: var(--muted); line-height: 1.6; margin-bottom: 28px; }
+    button {
+      height: 48px;
+      padding: 0 28px;
+      border: 0;
+      border-radius: 999px;
+      background: var(--fuchsia);
+      color: var(--ivory);
+      font: inherit;
+      font-weight: 500;
+      cursor: pointer;
+      transition: transform 0.2s ease;
+    }
+    button:hover { transform: translateY(-2px); }
+    button:focus-visible { outline: 2px solid var(--fuchsia); outline-offset: 3px; }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="mark" aria-hidden="true"></div>
+    <h1>Você está sem internet</h1>
+    <p>Assim que a conexão voltar, os vestidos aparecem de novo. Os itens da sua sacola continuam salvos neste aparelho.</p>
+    <button type="button" onclick="location.reload()">Tentar de novo</button>
+  </main>
+  <script>
+    window.addEventListener("online", () => location.reload());
+  </script>
+</body>
+</html>
