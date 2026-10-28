@@ -46,7 +46,9 @@ function getStatusColor(status: string | null) {
     "OUT_FOR_DELIVERY": "text-cyan-600",
     "AWAITING_PAYMENT": "text-amber-600",
     "PAID": "text-emerald-600",
-    "REFUNDED": "text-rose-600"
+    "REFUNDED": "text-rose-600",
+    "EXPIRED": "text-gray-500",
+    "PAYMENT_FAILED": "text-red-600"
   };
   
   return statusColors[status.toUpperCase()] || "text-gray-500";
@@ -66,7 +68,9 @@ function translateStatus(status: string | null) {
     "OUT_FOR_DELIVERY": "Saiu para entrega",
     "AWAITING_PAYMENT": "Aguardando pagamento",
     "PAID": "Pago",
-    "REFUNDED": "Reembolsado"
+    "REFUNDED": "Reembolsado",
+    "EXPIRED": "Pagamento expirado",
+    "PAYMENT_FAILED": "Pagamento recusado"
   };
   
   return statusTranslations[status.toUpperCase()] || status;
@@ -84,12 +88,12 @@ export function OrderCard({ order, userName, userId }: OrderCardProps) {
     : 0;
 
   return (
-    <div className="bg-background border rounded-xl p-6 shadow-sm font-extralight">
+    <div className="bg-background border rounded-xl p-4 sm:p-6 shadow-sm font-extralight">
       {/* Cabeçalho */}
-      <div className="flex items-center justify-between mb-4">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-1 mb-3">
-        <div className="flex flex-col gap-0.5">
-          <span className=" text-lg">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-4">
+      <div className="flex min-w-0 flex-col md:flex-row md:items-center md:justify-between gap-1">
+        <div className="flex min-w-0 flex-col gap-0.5">
+          <span className="truncate text-base sm:text-lg">
             Pedido #: {orderNumber}
           </span>
           <span className=" text-muted-foreground text-sm">
@@ -98,7 +102,8 @@ export function OrderCard({ order, userName, userId }: OrderCardProps) {
           
         </div>
       </div>
-      {order.status === "PENDING" && (
+      {/* Pedido ainda não pago: a cliente pode tentar pagar de novo */}
+      {!order.isPaid && ["PENDING", "EXPIRED", "PAYMENT_FAILED"].includes(order.status ?? "PENDING") && (
             <Link
               href={`/cart/checkout/${order.id}`}         
             >

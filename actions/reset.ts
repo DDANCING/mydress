@@ -6,6 +6,10 @@ import { ResetSchema } from "@/schemas";
 import { getUserByEmail } from "@/data/user";
 import { sendPasswordResetEmail } from "@/lib/mail";
 import { generatePasswordResetToken } from "@/lib/tokens";
+import { RATE_LIMITS, getClientIp, rateLimitAll, tooManyAttemptsMessage } from "@/lib/rate-limit";
+
+// Resposta igual exista ou não a conta: o formulário não serve para descobrir e-mails cadastrados
+const RESET_SENT = "Se este e-mail tiver uma conta, enviamos o link de redefinição.";
 
 export const reset = async (values: z.infer<typeof ResetSchema>) => {
   const validatedFields = ResetSchema.safeParse(values);
@@ -16,10 +20,18 @@ export const reset = async (values: z.infer<typeof ResetSchema>) => {
 
   const { email } = validatedFields.data;
 
+  const attempt = await rateLimitAll([
+    [`reset:ip:${await getClientIp()}`, RATE_LIMITS.resetIp],
+    [`email:reset:${email}`, RATE_LIMITS.sendEmail],
+  ]);
+  if (!attempt.success) {
+    return { error: tooManyAttemptsMessage(attempt) };
+  }
+
   const existingUser = await getUserByEmail(email);
 
   if(!existingUser) {
-    return { error: "Este email não existe!"};
+    return { success: RESET_SENT };
   }
 
   const passwordResetToken = await generatePasswordResetToken(email);
@@ -28,5 +40,5 @@ export const reset = async (values: z.infer<typeof ResetSchema>) => {
     passwordResetToken.token,
   )
 
-  return { success: "Email de redefinição enviado!" };
+  return { success: RESET_SENT };
 }

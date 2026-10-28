@@ -1,12 +1,22 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { RATE_LIMITS, getIpFromHeaders, rateLimit, tooManyAttemptsMessage } from "@/lib/rate-limit";
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const code = searchParams.get("code");
 
-  if (!code) {
+  if (!code || code.length > 50) {
     return new NextResponse("Código do cupom ausente", { status: 400 });
+  }
+
+  // Impede testar códigos em sequência até acertar um cupom
+  const attempt = await rateLimit(`coupon:ip:${getIpFromHeaders(req.headers)}`, RATE_LIMITS.coupon);
+  if (!attempt.success) {
+    return new NextResponse(tooManyAttemptsMessage(attempt), {
+      status: 429,
+      headers: { "Retry-After": String(attempt.retryAfterSeconds) },
+    });
   }
 
   try {

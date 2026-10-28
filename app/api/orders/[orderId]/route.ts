@@ -1,4 +1,4 @@
-import { auth } from "@/auth";
+import { requireStaff } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
@@ -14,6 +14,10 @@ export async function GET(
   context: { params: Promise<{ orderId: string }> }
 ) {
   try {
+    // Rota do painel: só a equipe lê, altera ou apaga pedidos
+    const denied = await requireStaff();
+    if (denied) return denied;
+
     const { orderId } = await context.params;
 
     if (!orderId) {
@@ -65,10 +69,9 @@ export async function PATCH(
   context: { params: Promise<{ orderId: string }> }
 ) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return new NextResponse("Unauthenticated", { status: 401 });
-    }
+    // Rota do painel: só a equipe lê, altera ou apaga pedidos
+    const denied = await requireStaff();
+    if (denied) return denied;
 
     const { orderId } = await context.params;
     const body = await req.json();
@@ -216,10 +219,9 @@ export async function DELETE(
   context: { params: Promise<{ orderId: string }> }
 ) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return new NextResponse("Unauthenticated", { status: 401 });
-    }
+    // Rota do painel: só a equipe lê, altera ou apaga pedidos
+    const denied = await requireStaff();
+    if (denied) return denied;
 
     const { orderId } = await context.params;
 

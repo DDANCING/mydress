@@ -1,11 +1,11 @@
-import { auth } from "@/auth"
+import { requireStaff } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { NextResponse } from "next/server"
 
 export async function POST(req: Request) {
   try {
-    const user = await auth();
-    const userId = user?.user?.id;
+    const denied = await requireStaff();
+    if (denied) return denied;
     const body = await req.json();
 
     const {
@@ -23,7 +23,6 @@ export async function POST(req: Request) {
       IsEffected = true
     } = body;
 
-    if (!userId) return new NextResponse("Unauthenticated", { status: 401 });
 
     if (!fullName) return new NextResponse("Fullname is required", { status: 400 });
    
@@ -71,6 +70,9 @@ export async function POST(req: Request) {
 }
 
 export async function GET(req: Request) {
+  const denied = await requireStaff();
+  if (denied) return denied;
+
   const { searchParams } = new URL(req.url);
   const email = searchParams.get("email");
 

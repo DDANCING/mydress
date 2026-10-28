@@ -3,106 +3,85 @@ import { persist, createJSONStorage } from "zustand/middleware";
 
 import { StoreProduct, CartItem } from "@/app/types";
 import { toast } from "sonner";
-import { redirect } from "next/navigation";
+import { isSameEventDay } from "@/lib/booking-rules";
+
+// Preço mostrado no carrinho. O valor cobrado é sempre recalculado no servidor ao criar o pedido.
+export const getCartPrice = (product: StoreProduct, contractType: "SALE" | "RENTAL") => {
+  if (contractType === "RENTAL") {
+    const rental = Number(product.rentalValue);
+    return rental > 0 ? rental : Number(product.price) / 2;
+  }
+  return Number(product.price);
+};
 
 interface CartItemData {
   product: StoreProduct;
   contractType: "SALE" | "RENTAL";
   eventDate?: Date;
   cep?: string;
-  shippingPrice?: number;
 }
 
 interface CartStore {
   items: CartItem[];
-  addItem: (data: CartItemData) => void;
+  addItem: (data: CartItemData) => boolean;
   removeItem: (id: string, contractType?: "SALE" | "RENTAL") => void;
   removeAll: () => void;
   updateItemDate: (id: string, contractType: "SALE" | "RENTAL", eventDate: Date) => void;
 };
+
+const goToCart = { label: "Ver carrinho", onClick: () => { window.location.href = "/cart"; } };
 
 const useCart = create(
   persist<CartStore>((set, get) => ({
     items: [],
     addItem: (data: CartItemData) => {
       const currentItems = get().items;
-      
+
       // Se o produto é apenas para aluguel, forçar contractType para RENTAL
-      const finalContractType = data.product.isOnlyRental === true ? "RENTAL" : data.contractType;
-      
-      // Crie uma chave única baseada no ID do produto e tipo de contrato
-      const itemKey = `${data.product.id}-${finalContractType}`;
-      const existingItem = currentItems.find((item) => `${item.id}-${item.contractType}` === itemKey);
+      const contractType = data.product.isOnlyRental === true ? "RENTAL" : data.contractType;
 
-      if (existingItem) {
-        return toast.info("O item já foi adicionado ao carrinho.", {
-          action: {
-            label: "Ver carrinho ",
-            onClick: () => redirect("/cart"),
-          },
+      if (currentItems.some((item) => item.id === data.product.id)) {
+        toast.info("Este vestido já está no carrinho.", { action: goToCart });
+        return false;
+      }
+
+      // Um pedido tem uma única data de evento/entrega
+      const otherDate = currentItems.find((item) => item.eventDate && !isSameEventDay(item.eventDate, data.eventDate));
+      if (data.eventDate && otherDate) {
+        toast.error("O carrinho já tem um vestido para outra data.", {
+          description: "Finalize aquele pedido primeiro ou ajuste as datas para o mesmo dia.",
+          action: goToCart,
         });
+        return false;
       }
 
-      // NOVA LÓGICA: Se for aluguel e produto tiver rentalValue, use rentalValue
-      let cartPrice: number;
-      if (finalContractType === "RENTAL") {
-        cartPrice =
-          data.product.rentalValue !== null && data.product.rentalValue !== undefined
-            ? Number(data.product.rentalValue)
-            : Number(data.product.price) / 2;
-      } else {
-        cartPrice = Number(data.product.price);
-      }
-
-      // Calcule o preço total (produto + frete)
-      const shippingPrice = data.shippingPrice || 0;
-      const totalPrice = cartPrice + shippingPrice;
-
-      // Crie o item do carrinho
       const cartItem: CartItem = {
         ...data.product,
-        contractType: finalContractType, // Usar o tipo final (pode ter sido alterado)
-        cartPrice,
+        contractType,
+        cartPrice: getCartPrice(data.product, contractType),
         eventDate: data.eventDate,
         cep: data.cep,
-        shippingPrice,
-        totalPrice
       };
 
-      set({ items: [...get().items, cartItem]});
-      return toast.info("O item foi adicionado ao carrinho.", {
-        action: {
-          label: "Ver carrinho ",
-          onClick: () => redirect("/cart"),
-        },
-      });
+      set({ items: [...currentItems, cartItem] });
+      toast.success("Vestido adicionado ao carrinho.", { action: goToCart });
+      return true;
     },
     removeItem: (id: string, contractType: "SALE" | "RENTAL" = "SALE") => {
       const itemKey = `${id}-${contractType}`;
       set({
         items: [...get().items.filter((item) => `${item.id}-${item.contractType}` !== itemKey)]
       });
-      toast.success("O item foi removido do carrinho.", {
-        action: {
-          label: "Ver carrinho ",
-          onClick: () => redirect("/cart"),
-        },
-      });
+      toast.success("O item foi removido do carrinho.");
     },
     removeAll: () => set({ items: []}),
     updateItemDate: (id: string, contractType: "SALE" | "RENTAL", eventDate: Date) => {
       const itemKey = `${id}-${contractType}`;
-      const currentItems = get().items;
-      const updatedItems = currentItems.map(item => {
-        if (`${item.id}-${item.contractType}` === itemKey) {
-          return {
-            ...item,
-            eventDate
-          };
-        }
-        return item;
+      set({
+        items: get().items.map((item) =>
+          `${item.id}-${item.contractType}` === itemKey ? { ...item, eventDate } : item
+        ),
       });
-      set({ items: updatedItems });
     },
   }), {
     name: "cart-storage",

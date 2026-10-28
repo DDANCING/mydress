@@ -2,10 +2,13 @@ import { db } from "@/lib/db";
 import * as z from "zod";
 import { ScheduleType } from "@prisma/client";
 
+// E-mail sempre sem espaços e em minúsculas: o formulário já envia assim e o servidor grava/compara assim
+const emailField = (message?: string) => z.string().trim().toLowerCase().email(message ? { message } : undefined);
+
 export const SettingsSchema = z.object({
   name: z.optional(z.string()),
   isTwoFactorEnabled: z.optional(z.boolean()),
-  email: z.optional(z.string().email()),
+  email: z.optional(emailField()),
   password: z.optional(z.string().min(6)),
   newPassword: z.optional(z.string().min(6)),
 })
@@ -44,18 +47,12 @@ export const NewPasswordSchema = z.object({
 });
 
 export const ResetSchema = z.object({
-  email: z.string().email({
-    message: "Email is required",
-
-  }),
+  email: emailField("Email is required"),
 
 
 });
   export const LoginSchema = z.object({
-    email: z.string().email({
-      message: "Email is required",
-
-    }),
+    email: emailField("Email is required"),
     password: z.string().min(1, {
       message: "password is required",
 
@@ -65,7 +62,7 @@ export const ResetSchema = z.object({
   });
 export const RegisterSchema = z.object({
   name: z.string().min(1, { message: "Nome é obrigatório" }),
-  email: z.string().email({ message: "Email inválido" }),
+  email: emailField("Email inválido"),
   password: z
     .string()
     .min(8, { message: "A senha deve ter pelo menos 8 caracteres" })

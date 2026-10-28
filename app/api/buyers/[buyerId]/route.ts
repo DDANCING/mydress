@@ -1,6 +1,4 @@
-/* eslint-disable react-hooks/rules-of-hooks */
-import { auth } from "@/auth";
-import { useUserId } from "@/data/hooks/use-current-id";
+import { requireStaff } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { NextResponse } from "next/server"
 
@@ -9,6 +7,8 @@ export async function GET(
   context: { params: Promise<{  buyerId: string }> }
 ) {
   try {
+    const denied = await requireStaff();
+    if (denied) return denied;
     const { buyerId } = await context.params;
 
 
@@ -36,8 +36,8 @@ export async function PATCH(
   context: { params: Promise<{  buyerId: string }> }
 ) {
   try {
-    const user = await auth();
-    if (!user?.user?.id) return new NextResponse("Unauthenticated", { status: 401 });
+    const denied = await requireStaff();
+    if (denied) return denied;
 
     const { buyerId } = await context.params;
     const body = await req.json();
@@ -113,10 +113,8 @@ export async function DELETE(
    context: { params: Promise<{  buyerId: string }> }
 ) {
   try {
-    const userId = await useUserId(req);
-    if (!userId) {
-      return new NextResponse("Unauthorized", { status: 401 });
-    }
+    const denied = await requireStaff();
+    if (denied) return denied;
 
     const { buyerId } = await context.params;
     if (!buyerId) {

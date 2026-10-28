@@ -1,152 +1,93 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
-import CheckoutClientForm from "./_components/checkout-client-form";
+import { getCouponDiscount } from "@/lib/store-orders";
+import CheckoutClientForm, { CheckoutOrder } from "./_components/checkout-client-form";
+
+// O carrinho antigo gravava valores fictícios no cadastro; não mostrá-los como se fossem da cliente
+const PLACEHOLDERS = new Set(["00000000000", "Rua Exemplo", "Cidade", "UF", "Bairro", "123", "Complemento"]);
+const clean = (value?: string | null) => (value && !PLACEHOLDERS.has(value) ? value : "");
 
 interface CheckoutIdPageProps {
   params: Promise<{ checkoutId: string }>;
+  searchParams: Promise<{ canceled?: string }>;
 }
 
-const checkoutPage = async ({ params }: CheckoutIdPageProps) => {
+const CheckoutPage = async ({ params, searchParams }: CheckoutIdPageProps) => {
   const { checkoutId } = await params;
-  const user = await auth();
+  const { canceled } = await searchParams;
+  const session = await auth();
 
-  const order = await db.order.findUnique({
-    where: {
-      id: checkoutId,
-      buyer: {
-        email: user?.user?.email || "",
-      }
-    },
-    include: {
-      buyer: true,
-      orderItems: {
-        select: {
-          product: {
-            select: {
-              id: true,
-              sku: true,
-              name: true,
-              price: true,
-              images: true,
-              rentalValue: true,
-              isOnlyRental: true,
-              schedules: {
-                select: {
-                  id: true,
-                  startDate: true,
-                  endDate: true,
-                  type: true,
-                  productId: true,
-                }
-              }
-            }
-          },
-          quantity: true,
-          type: true,
-        }
-      },
-      coupon: true, 
-    }
-  });
-
-  if (!order) {
-    notFound();
+  if (!session?.user?.email) {
+    redirect(`/auth/login?callbackUrl=${encodeURIComponent(`/cart/checkout/${checkoutId}`)}`);
   }
 
-  
-  const orderWithNumberPrice = {
-    ...order,
-    buyer: {
-      ...order.buyer,
-      fullName: order.buyer.fullName || "", 
-      email: order.buyer.email || "",
-      phone: order.buyer.phone || null,
-      address: order.buyer.address || null,
-      number: order.buyer.number || null,
-      complement: order.buyer.complement || null,
-      neighborhood: order.buyer.neighborhood || null,
-      city: order.buyer.city || null,
-      state: order.buyer.state || null,
-      cep: order.buyer.cep || null,
-      document:
-        order.buyer.document && typeof order.buyer.document === "object"
-          ? order.buyer.document
-          : order.buyer.document
-          ? { cpfCnpj: order.buyer.document }
-          : undefined,
-    },
-    sku:
-      order.orderItems && order.orderItems.length > 0
-        ? (order.orderItems[0].product.sku !== null && order.orderItems[0].product.sku !== undefined
-            ? String(order.orderItems[0].product.sku)
-            : "")
-        : "",
-    totalAmount: typeof order.totalAmount === "number" ? order.totalAmount : Number(order.totalAmount),
-    orderItems: order.orderItems.map((item) => ({
-      ...item,
-      unitPrice: item.type === "RENTAL" 
-        ? (item.product.rentalValue !== undefined && item.product.rentalValue !== null
-           ? Number(item.product.rentalValue)
-           : (typeof item.product.price === "number" ? item.product.price : Number(item.product.price)) / 2)
-        : (typeof item.product.price === "number" ? item.product.price : Number(item.product.price)),
-      type: item.type === "SALE" || item.type === "ClothingSALE" ? "SALE" as const : "RENTAL" as const,
-      product: {
-        ...item.product,
-        price: typeof item.product.price === "number" ? item.product.price : Number(item.product.price),
-        sku: item.product.sku !== null && item.product.sku !== undefined ? String(item.product.sku) : "",
-        rentalValue: item.product.rentalValue !== null ? Number(item.product.rentalValue) : undefined,
-        isOnlyRental: item.product.isOnlyRental || false,
-        images: Array.isArray(item.product.images)
-          ? item.product.images.map((img) => typeof img === "string" ? img : img.url)
-          : [],
-        color: { name: "Padrão", value: "#000000" }, // Valores padrão
-        size: { name: "Único", value: "U" }, // Valores padrão
-      },
-    })),
-    shippingMethod: order.shippingMethod === null ? undefined : order.shippingMethod,
-    shippingCost:
-      order.shippingCost === null || order.shippingCost === undefined
-        ? undefined
-        : typeof order.shippingCost === "number"
-        ? order.shippingCost
-        : Number(order.shippingCost),
-    coupon:
-      typeof order.coupon === "undefined" || order.coupon === null
-        ? null
-        : {
-            id: order.coupon.id,
-            code: order.coupon.code || order.coupon.id, // Usar código se existe, senão usar ID
-            discountType:
-              order.coupon.discountType === "fixed" || order.coupon.discountType === "percentage"
-                ? order.coupon.discountType as "fixed" | "percentage"
-                : "fixed", // fallback to "fixed" if not matching
-            discountValue:
-              typeof order.coupon.discountValue === "number"
-                ? order.coupon.discountValue
-                : Number(order.coupon.discountValue),
-            isActive:
-              typeof order.coupon.usageLimit === "undefined" || order.coupon.usageLimit === null
-                ? order.coupon.expiresAt === null ||
-                  new Date(order.coupon.expiresAt) > new Date() // consider coupon active if
-                : // fallback: consider coupon active if not expired and usage limit not reached
-                  (order.coupon.expiresAt === null ||
-                    new Date(order.coupon.expiresAt) > new Date()) &&
-                  (order.coupon.usageLimit === null ||
-                    order.coupon.usedCount < order.coupon.usageLimit),
+  const order = await db.order.findFirst({
+    where: { id: checkoutId, buyer: { email: session.user.email } },
+    include: {
+      buyer: true,
+      coupon: true,
+      orderItems: {
+        include: {
+          product: {
+            select: {
+              name: true,
+              sku: true,
+              images: { select: { url: true }, take: 1 },
+              color: { select: { name: true } },
+              size: { select: { name: true } },
+            },
           },
-    couponId: typeof order.couponId === "undefined" ? null : order.couponId,
-    schedules: order.orderItems.length > 0 ? order.orderItems[0]?.product?.schedules || [] : [],
-    eventDate: order.eventDate,
-    status: order.status || undefined, // Converter null para undefined
+        },
+      },
+    },
+  });
+
+  if (!order) notFound();
+  if (order.isPaid) redirect(`/order/${order.id}`);
+
+  const subtotal = order.orderItems.reduce((acc, item) => acc + Number(item.subtotal), 0);
+
+  const checkoutOrder: CheckoutOrder = {
+    id: order.id,
+    eventDate: order.eventDate?.toISOString() ?? null,
+    shippingMethod: order.shippingMethod,
+    shippingCost: Number(order.shippingCost ?? 0),
+    shippingTime: order.shippingTime,
+    subtotal,
+    discount: getCouponDiscount(order.coupon, subtotal),
+    couponCode: order.coupon?.code ?? null,
+    hasRental: order.orderItems.some((item) => item.type === "RENTAL" || item.type === "clothingRENTAL"),
+    items: order.orderItems.map((item) => ({
+      id: item.id,
+      name: item.product.name,
+      sku: item.product.sku,
+      image: item.product.images[0]?.url ?? null,
+      color: item.product.color.name,
+      size: item.product.size.name,
+      type: item.type === "SALE" || item.type === "ClothingSALE" ? "SALE" : "RENTAL",
+      unitPrice: Number(item.unitPrice),
+    })),
+    buyer: {
+      fullName: order.buyer.fullName,
+      email: order.buyer.email ?? session.user.email,
+      phone: clean(order.buyer.phone),
+      document: clean(order.buyer.document),
+      cep: clean(order.buyer.cep),
+      address: clean(order.buyer.address),
+      number: clean(order.buyer.number),
+      complement: clean(order.buyer.complement),
+      neighborhood: clean(order.buyer.neighborhood),
+      city: clean(order.buyer.city),
+      state: clean(order.buyer.state),
+    },
   };
 
-
   return (
-    <div>
-      <CheckoutClientForm order={orderWithNumberPrice}/>
+    <div className="mt-20">
+      <CheckoutClientForm order={checkoutOrder} canceled={canceled === "1"} />
     </div>
   );
 };
 
-export default checkoutPage;
+export default CheckoutPage;

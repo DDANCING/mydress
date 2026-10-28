@@ -3,7 +3,7 @@
 import { getPasswordResetTokenByToken } from "@/data/password-reset-token";
 import { getUserByEmail } from "@/data/user";
 import { NewPasswordSchema } from "@/schemas";
-import { error } from "console";
+import { RATE_LIMITS, getClientIp, rateLimit, tooManyAttemptsMessage } from "@/lib/rate-limit";
 import * as z from "zod";
 import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
@@ -14,6 +14,11 @@ export const newPassword = async (
 ) => {
   if (!token) {
       return { error: "Missing token!" };
+    }
+
+    const attempt = await rateLimit(`token:ip:${await getClientIp()}`, RATE_LIMITS.tokenIp);
+    if (!attempt.success) {
+      return { error: tooManyAttemptsMessage(attempt) };
     }
 
     const validatedFields = NewPasswordSchema.safeParse(values);

@@ -1,5 +1,6 @@
 "use server";
 
+import { assertStaff } from "@/lib/auth";
 import { db } from "@/lib/db";
 
 // Helper function para extrair o documento correto do destinatário
@@ -36,6 +37,7 @@ function extractDocumentFromDestinatario(destinatario: any): string | null {
 
 export async function getNextInvoiceNumber() {
   try {
+    await assertStaff();
     const lastInvoice = await db.invoice.findFirst({
       where: {
         NOT: {
@@ -71,6 +73,7 @@ export async function findOrCreateSupplierByDocument(document: string, supplierD
   address?: string;
 }) {
   try {
+    await assertStaff();
     
     // Limpar o documento (remover caracteres especiais)
     const cleanDocument = document.replace(/\D/g, '');
@@ -108,6 +111,7 @@ export async function findOrCreateSupplierByDocument(document: string, supplierD
 
 export async function findOrCreateSupplierByOriginalInvoice(originalInvoiceData: any) {
   try {
+    await assertStaff();
 
     const emitente = originalInvoiceData?.emitente;
     if (!emitente) {
@@ -137,6 +141,7 @@ export async function findOrCreateSupplierByOriginalInvoice(originalInvoiceData:
 
 export async function findSupplierByDocument(document: string) {
   try {
+    await assertStaff();
     const clean = String(document ?? '').replace(/\D/g, '');
     return await db.supplier.findFirst({ where: { document: clean } });
   } catch (error) {
@@ -157,6 +162,7 @@ export async function createInvoiceRecord(data: {
   originalInvoiceId?: string;
 }) {
   try {
+    await assertStaff();
     return await db.invoice.create({
       data: {
         type: data.type,
@@ -179,6 +185,7 @@ export async function createInvoiceRecord(data: {
 
 export async function findInvoiceByChaveNfe(chaveNfe: string) {
   try {
+    await assertStaff();
     return await db.invoice.findFirst({
       where: {
         chaveNfe: chaveNfe
