@@ -9,6 +9,7 @@ import { LoginSchema } from "@/schemas";
 import { UserRole } from "@prisma/client";
 import { getTwoFactorConfirmationByUserId } from "@/data/two-factor-confirmation";
 import { getAccountByUserId } from "./data/account";
+import { RATE_LIMITS, getIpFromHeaders, rateLimitAll, resetRateLimit } from "@/lib/rate-limit";
 
 export const { 
   handlers,
@@ -19,16 +20,28 @@ export const {
   providers: [
     ...authConfig.providers,
     Credentials({
-      async authorize(credentials) {
+      async authorize(credentials, request) {
         const validatedFields = LoginSchema.safeParse(credentials);
         if (!validatedFields.success) return null;
 
         const { email, password } = validatedFields.data;
+
+        // Também limita quem chama /api/auth/callback/credentials direto, sem passar pela action de login
+        const ip = request?.headers ? getIpFromHeaders(request.headers) : "unknown";
+        const emailKey = `auth:email:${email}`;
+        const checks: Parameters<typeof rateLimitAll>[0] = [[emailKey, RATE_LIMITS.loginEmail]];
+        if (ip !== "unknown") checks.push([`auth:ip:${ip}`, RATE_LIMITS.loginIp]);
+        const attempt = await rateLimitAll(checks);
+        if (!attempt.success) return null;
+
         const user = await getUserByEmail(email);
         if (!user?.password) return null;
 
         const passwordsMatch = await bcrypt.compare(password, user.password);
-        return passwordsMatch ? user : null;
+        if (!passwordsMatch) return null;
+
+        await resetRateLimit(emailKey);
+        return user;
       },
     }),
   ],

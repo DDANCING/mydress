@@ -1,1052 +1,479 @@
 "use client";
 
 import Image from "next/image";
-import { useState, useMemo, useTransition, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Check, ChevronDown, MessageCircle, Loader2, ShoppingCart, Calendar as CalendarIcon } from "lucide-react";
-import { format, addDays, subDays, isAfter, isBefore, isSameDay } from "date-fns";
+import { useEffect, useMemo, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { CalendarIcon, Loader2, ShoppingBag, Trash2, Truck } from "lucide-react";
+import { FaWhatsapp } from "react-icons/fa";
+import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-
-import { formatter, cn } from "@/lib/utils";
-import useCart from "@/hooks/use-cart";
-import { siteConfig } from "@/lib/site-config";
-import { calcularFrete } from "@/actions/correios";
 import { toast } from "sonner";
 
+import { CartItem } from "@/app/types";
+import { calcularFrete, FreteResult } from "@/actions/correios";
+import useCart from "@/hooks/use-cart";
+import { cn, formatter } from "@/lib/utils";
+import { whatsappLink } from "@/lib/site-config";
 import {
-  Popover,
-  PopoverTrigger,
-  PopoverContent,
-} from "@/components/ui/popover";
-import {
-  Command,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  Booking,
+  DEFAULT_SHIPPING_DAYS,
+  getMinimumEventDate,
+  getRentalUsePeriod,
+  isDateAvailable,
+  isSameEventDay,
+} from "@/lib/booking-rules";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { countries } from "@/lib/countries";
-import { FaWhatsapp } from "react-icons/fa";
-import { Progress } from "@/components/ui/progress";
+import { Calendar } from "@/components/ui/calendar";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 interface CartClientProps {
-  user: {
-    name: string;  
-    email: string;
-  };
-  searchParams?: {
-    success?: string;
-    canceled?: string;
-    orderId?: string;
-  };
+  user: { name: string; email: string };
+  searchParams?: { success?: string; canceled?: string; orderId?: string };
 }
 
-export default function CartClient({ user, searchParams }: CartClientProps) {
+type Coupon = { code: string; discountType: "percentage" | "fixed"; discountValue: number };
+
+const formatCep = (value: string) => {
+  const numbers = value.replace(/\D/g, "").slice(0, 8);
+  return numbers.length <= 5 ? numbers : `${numbers.slice(0, 5)}-${numbers.slice(5)}`;
+};
+
+const itemKey = (item: CartItem) => `${item.id}-${item.contractType}`;
+const toDate = (value?: Date | string) => (value ? new Date(value) : undefined);
+
+export default function CartClient({ searchParams }: CartClientProps) {
   const cart = useCart();
   const router = useRouter();
 
-  // Obter o primeiro CEP dos itens do carrinho (se disponível)
-  const cepFromCart = cart.items.length > 0 && cart.items[0].cep ? cart.items[0].cep : "";
-  
-  const [cepDestino, setCepDestino] = useState(cepFromCart);
-  const [pais, setPais] = useState("Brasil");
-  const [fretes, setFretes] = useState<
-    { id: string; name: string; price: number; delivery_time: number }[]
-  >([]);
-  const [freteSelecionado, setFreteSelecionado] = useState<null | {
-    price: number;
-    name: string;
-    delivery_time: number;
-  }>(null);
-  const [promoCode, setPromoCode] = useState("");
-  const [promoApplied, setPromoApplied] = useState(false);
-  const [cupomValido, setCupomValido] = useState<null | {
-  id: string;
-  code: string;
-  discountType: "percentage" | "fixed";
-  discountValue: number;
-}>(null);
-  const [isPending, startTransition] = useTransition();
-  const [isCheckingOut, setIsCheckingOut] = useState(false);
-  const [loadingStep, setLoadingStep] = useState(0);
+  // O carrinho vem do localStorage: só renderiza os itens depois de montar, para não piscar "vazio"
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const items = useMemo(() => (mounted ? cart.items : []), [mounted, cart.items]);
 
-  // Tratar parâmetros de sucesso/cancelamento do pagamento
+  const [cep, setCep] = useState("");
+  const [quotes, setQuotes] = useState<FreteResult[]>([]);
+  const [selectedQuoteId, setSelectedQuoteId] = useState<string | null>(null);
+  const [isQuoting, startQuoting] = useTransition();
+
+  const [couponCode, setCouponCode] = useState("");
+  const [coupon, setCoupon] = useState<Coupon | null>(null);
+  const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
+
+  // Escolha de data de um item
+  const [dateItem, setDateItem] = useState<CartItem | null>(null);
+  const [dateBookings, setDateBookings] = useState<Booking[]>([]);
+  const [loadingBookings, setLoadingBookings] = useState(false);
+
+  // Retorno do Stripe em links antigos (/cart?success=1)
   useEffect(() => {
-    if (searchParams?.success === "1") {
-      // Limpar o carrinho após pagamento bem-sucedido
+    if (searchParams?.success === "1" && searchParams.orderId) {
       cart.removeAll();
-      
-      // Redirecionar para página de agradecimento com orderId
-      if (searchParams.orderId) {
-        // Usar window.location.replace para evitar loops de navegação
-        window.location.replace(`/order/${searchParams.orderId}`);
-      } else {
-        toast.success("Pagamento realizado com sucesso!", {
-          description: "Seu pedido foi confirmado",
-          duration: 5000,
-        });
-        
-        // Redirecionar para página de pedidos após alguns segundos
-        setTimeout(() => {
-          window.location.replace("/profile/orders");
-        }, 3000);
-      }
+      window.location.replace(`/order/${searchParams.orderId}`);
     } else if (searchParams?.canceled === "1") {
-      toast.error("Pagamento cancelado", {
-        description: "Você pode tentar novamente ou escolher outro método de pagamento",
-        duration: 5000,
-      });
+      toast.error("Pagamento cancelado", { description: "Você pode tentar novamente quando quiser." });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
-  
-  // Estados para o modal de data
-  const [showDateModal, setShowDateModal] = useState(false);
-  const [selectedDateForItem, setSelectedDateForItem] = useState<Date>();
-  const [currentItemIndex, setCurrentItemIndex] = useState(0);
-  const [itemsWithoutDate, setItemsWithoutDate] = useState<typeof cart.items>([]);
-  const [itemSchedules, setItemSchedules] = useState<Array<{
-    id: string;
-    eventDate: Date;
-    contractType: "SALE" | "RENTAL";
-  }>>([]);
-  const [loadingSchedules, setLoadingSchedules] = useState(false);
 
-  // Buscar fretes automaticamente quando houver CEP no carrinho
+  // CEP informado na página do produto
   useEffect(() => {
-    const buscarFretesAuto = () => {
-      if (!cepDestino || cart.items.length === 0) return;
-
-      const quantidade = cart.items.length;
-      const isInternacional = cepDestino.length < 8 || /\D/.test(cepDestino);
-
-      const args = {
-        sCepOrigem: "85812011",
-        sCepDestino: cepDestino.replace("-", ""),
-        quantidade,
-        ...(isInternacional && { paisDestino: pais })
-      };
-
-      startTransition(async () => {
-        try {
-          const result = await calcularFrete(args);
-
-          if (!Array.isArray(result)) {
-            setFretes([]);
-            return;
-          }
-
-          const servicos = result.map((s) => ({
-            id: s.id,
-            name: s.name,
-            price: parseFloat(s.price.toFixed(2)),
-            delivery_time: s.delivery_time,
-          }));
-
-          setFretes(servicos);
-        } catch (error) {
-          setFretes([]);
-        }
-      });
-    };
-
-    if (cepFromCart && cart.items.length > 0 && cepDestino) {
-      // Pequeno delay para evitar múltiplas chamadas
-      const timeoutId = setTimeout(() => {
-        buscarFretesAuto();
-      }, 500);
-      
-      return () => clearTimeout(timeoutId);
-    }
-  }, [cepFromCart, cart.items.length, cepDestino, pais]);
-
-  // Atualizar CEP quando o carrinho mudar
-  useEffect(() => {
-    const novoCep = cart.items.length > 0 && cart.items[0].cep ? cart.items[0].cep : "";
-    if (novoCep && novoCep !== cepDestino) {
-      setCepDestino(novoCep);
-    }
+    const cepFromCart = items.find((item) => item.cep)?.cep;
+    if (cepFromCart && !cep) setCep(formatCep(cepFromCart));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cart.items]);
+  }, [items]);
 
-  
+  const eventDate = toDate(items.find((item) => item.eventDate)?.eventDate);
+  const missingDate = items.some((item) => !item.eventDate);
+  const mixedDates = items.some((item) => item.eventDate && !isSameEventDay(item.eventDate, eventDate));
 
-  const subtotal = useMemo(
-    () => cart.items.reduce((acc, item) => acc + item.cartPrice, 0),
-    [cart.items]
-  );
+  const subtotal = useMemo(() => items.reduce((acc, item) => acc + item.cartPrice, 0), [items]);
+  const discount = coupon
+    ? Math.min(subtotal, coupon.discountType === "percentage" ? subtotal * (coupon.discountValue / 100) : coupon.discountValue)
+    : 0;
 
-  // Verificar se há frete já calculado nos itens do carrinho
-  const freteFromCart = useMemo(() => {
-    if (cart.items.length > 0 && cart.items[0].shippingPrice !== undefined) {
-      return cart.items[0].shippingPrice;
-    }
-    return 0;
-  }, [cart.items]);
+  // Uma opção de frete só serve se chega antes da data escolhida
+  const arrivesInTime = (quote: FreteResult) => !eventDate || eventDate >= getMinimumEventDate(quote.delivery_time);
+  const selectedQuote = quotes.find((quote) => quote.id === selectedQuoteId && arrivesInTime(quote)) ?? null;
+  const total = subtotal - discount + (selectedQuote?.price ?? 0);
 
-  const discount = promoApplied && cupomValido
-  ? cupomValido.discountType === "percentage"
-    ? subtotal * (cupomValido.discountValue / 100) 
-    : cupomValido.discountValue
-  : 0;
-  
-  // Usar o frete do carrinho se disponível, caso contrário usar o selecionado
-  const deliveryCost = freteSelecionado?.price || freteFromCart;
-  const total = subtotal - discount + deliveryCost;
-
-  // Função para buscar schedules de um produto
-  const fetchProductSchedules = async (productId: string) => {
-    setLoadingSchedules(true);
-    try {
-      const response = await fetch(`/api/products/${productId}/schedules`);
-      if (response.ok) {
-        const schedules = await response.json();
-        setItemSchedules(schedules.map((schedule: any) => ({
-          id: schedule.id,
-          eventDate: new Date(schedule.eventDate || schedule.deliveryDate),
-          contractType: schedule.type === "SALE" || schedule.type === "ClothingSALE" ? "SALE" as const : "RENTAL" as const
-        })));
-      } else {
-        // Fallback - buscar schedules via contracts
-        const contractsResponse = await fetch(`/api/contracts/by-product/${productId}`);
-        if (contractsResponse.ok) {
-          const contracts = await contractsResponse.json();
-          setItemSchedules(contracts.map((contract: any) => ({
-            id: contract.id,
-            eventDate: new Date(contract.eventDate || contract.deliveryDate),
-            contractType: contract.type === "SALE" || contract.type === "ClothingSALE" ? "SALE" as const : "RENTAL" as const
-          })));
-        } else {
-          setItemSchedules([]);
-        }
-      }
-    } catch (error) {
-      setItemSchedules([]);
-    } finally {
-      setLoadingSchedules(false);
-    }
-  };
-
-  // Função para verificar se uma data está disponível (baseada no ProductClient)
-  const isDateAvailable = (date: Date, contractType: "SALE" | "RENTAL") => {
-    const today = new Date();
-    const shippingDays = freteSelecionado?.delivery_time || 3; // Usar tempo do frete selecionado ou padrão
-    
-    // Não permitir datas no passado
-    if (isBefore(date, today)) return false;
-    
-    // Verificar se a data mínima de envio é respeitada
-    const minDate = addDays(today, shippingDays);
-    if (isBefore(date, minDate)) return false;
-    
-    // Para vendas, verificar se há agendamentos que impedem a venda
-    if (contractType === "SALE") {
-      // Encontrar a última data agendada (qualquer tipo de contrato)
-      const lastSchedule = itemSchedules
-        .sort((a, b) => b.eventDate.getTime() - a.eventDate.getTime())[0];
-      
-      if (lastSchedule) {
-        // A última data + tempo de entrega + 3 dias é quando o produto estará disponível para venda
-        const availableFromDate = addDays(lastSchedule.eventDate, shippingDays + 3);
-        if (isBefore(date, availableFromDate)) {
-          return false;
-        }
-      }
-    }
-    
-    // Para aluguéis, verificar conflitos com outros eventos
-    if (contractType === "RENTAL") {
-      // Período que o produto ficará ocupado para o aluguel atual
-      const rentalStart = subDays(date, 3 + shippingDays); // 3 dias antes + tempo de envio para preparação
-      const rentalEnd = addDays(date, 3); // 3 dias após o evento para limpeza/retorno
-      
-      // Verificar conflitos com outros aluguéis
-      for (const schedule of itemSchedules) {
-        if (schedule.contractType === "RENTAL") {
-          // Período ocupado pelo aluguel existente
-          const existingRentalStart = subDays(schedule.eventDate, 3 + shippingDays);
-          const existingRentalEnd = addDays(schedule.eventDate, 3);
-          
-          // Verificar se há sobreposição de períodos
-          if (
-            (isAfter(rentalStart, existingRentalStart) || isSameDay(rentalStart, existingRentalStart)) &&
-            (isBefore(rentalStart, existingRentalEnd) || isSameDay(rentalStart, existingRentalEnd))
-          ) {
-            return false;
-          }
-          
-          if (
-            (isAfter(rentalEnd, existingRentalStart) || isSameDay(rentalEnd, existingRentalStart)) &&
-            (isBefore(rentalEnd, existingRentalEnd) || isSameDay(rentalEnd, existingRentalEnd))
-          ) {
-            return false;
-          }
-          
-          // Verificar se o aluguel atual engloba completamente o existente
-          if (
-            (isBefore(rentalStart, existingRentalStart) || isSameDay(rentalStart, existingRentalStart)) &&
-            (isAfter(rentalEnd, existingRentalEnd) || isSameDay(rentalEnd, existingRentalEnd))
-          ) {
-            return false;
-          }
-        }
-      }
-      
-      // Verificar conflitos com vendas
-      for (const schedule of itemSchedules) {
-        if (schedule.contractType === "SALE") {
-          const saleDeliveryDate = addDays(schedule.eventDate, shippingDays);
-          
-          // Se a venda for entregue durante o período de preparação ou execução do aluguel, há conflito
-          if (
-            (isAfter(saleDeliveryDate, rentalStart) || isSameDay(saleDeliveryDate, rentalStart)) &&
-            (isBefore(saleDeliveryDate, rentalEnd) || isSameDay(saleDeliveryDate, rentalEnd))
-          ) {
-            return false;
-          }
-        }
-      }
-    }
-    
-    return true;
-  };
-
-
-  const formatPrice = (value: number) => formatter.format(value);
-
-  // Função para gerar mensagem do WhatsApp
-  const generateWhatsAppMessage = () => {
-    if (cart.items.length === 0) return "";
-    
-    let message = "Olá! Gostaria de finalizar meu pedido pelo WhatsApp:\n\n";
-    message += "📋 *ITENS DO CARRINHO:*\n";
-    
-    cart.items.forEach((item, index) => {
-      const tipoContrato = item.contractType === "RENTAL" ? "Aluguel" : "Venda";
-      message += `${index + 1}. *${item.name}*\n`;
-      message += `   - Código: ${item.sku || item.id}\n`;
-      message += `   - Tipo: ${tipoContrato}\n`;
-      message += `   - Cor: ${item.color.name}\n`;
-      message += `   - Tamanho: ${item.size.name}\n`;
-      message += `   - Preço: ${formatPrice(item.cartPrice)}\n`;
-      if (item.contractType === "RENTAL") {
-        message += `   - Preço original: ${formatPrice(item.price)}\n`;
-      }
-      // Adicionar informações de data e CEP se disponíveis
-      if (item.eventDate) {
-        const dateLabel = item.contractType === "RENTAL" ? "Data do evento" : "Data de entrega";
-        message += `   - ${dateLabel}: ${format(item.eventDate, "dd/MM/yyyy", { locale: ptBR })}\n`;
-      }
-      if (item.cep) {
-        message += `   - CEP: ${item.cep}\n`;
-      }
-      message += "\n";
-    });
-    
-    message += `💰 *RESUMO:*\n`;
-    message += `Subtotal: ${formatPrice(subtotal)}\n`;
-    if (discount > 0) {
-      message += `Desconto: -${formatPrice(discount)}\n`;
-    }
-    if (deliveryCost > 0) {
-      message += `Entrega: ${formatPrice(deliveryCost)}\n`;
-    }
-    message += `*Total: ${formatPrice(total)}*\n\n`;
-    
-    if (freteSelecionado) {
-      message += `🚚 *ENTREGA:*\n`;
-      message += `${freteSelecionado.name} - ${freteSelecionado.delivery_time} dias úteis\n`;
-      message += `CEP: ${cepDestino}\n\n`;
-    } else if (cepDestino) {
-      message += `🚚 *ENTREGA:*\n`;
-      message += `CEP: ${cepDestino}\n\n`;
-    }
-    
-    message += "Aguardo retorno para finalizar o pedido! 😊";
-    
-    return encodeURIComponent(message);
-  };
-
-  const handleWhatsAppRedirect = () => {
-    const message = generateWhatsAppMessage();
-    const whatsappUrl = `https://wa.me/${siteConfig.whatsapp.number}?text=${message}`;
-    window.open(whatsappUrl, '_blank');
-  };
-
-const handleApplyPromo = async () => {
-  if (!promoCode.trim()) return;
-
-  try {
-    const res = await fetch(`/api/coupons?code=${promoCode}`);
-    
-    if (!res.ok) {
-      const errorText = await res.text();
-      if (res.status === 404) {
-        alert("Cupom não encontrado.");
-      } else if (res.status === 400) {
-        alert(errorText || "Cupom expirado ou limite atingido.");
-      } else {
-        alert("Cupom inválido.");
-      }
-      return;
-    }
-
-    const cupom = await res.json();
-
-    setCupomValido({
-      id: cupom.id,
-      code: cupom.code,
-      discountType: cupom.discountType,
-      discountValue: parseFloat(cupom.discountValue),
-    });
-
-    setPromoApplied(true);
-    alert(`Cupom "${cupom.code}" aplicado com sucesso!`);
-  } catch (err) {
-    alert("Erro ao processar cupom. Tente novamente.");
-    setPromoApplied(false);
-    setCupomValido(null);
-  }
-};
-  const buscarFretes = () => {
-    if (!cepDestino || cart.items.length === 0) return;
-
-    const quantidade = cart.items.length;
-    const isInternacional = cepDestino.length < 8 || /\D/.test(cepDestino);
-
-    const args = {
-      sCepOrigem: "85812011",
-      sCepDestino: cepDestino.replace("-", ""),
-      quantidade,
-      ...(isInternacional && { paisDestino: pais })
-    };
-
-    startTransition(async () => {
+  const quote = (value = cep) => {
+    if (value.length !== 9 || items.length === 0) return;
+    startQuoting(async () => {
       try {
-        const result = await calcularFrete(args);
-
-        if (!Array.isArray(result)) {
-          setFretes([]);
-          return;
-        }
-
-        const servicos = result.map((s) => ({
-          id: s.id,
-          name: s.name,
-          price: parseFloat(s.price.toFixed(2)),
-          delivery_time: s.delivery_time,
-        }));
-
-        setFretes(servicos);
-      } catch (error) {
-        setFretes([]);
+        const result = await calcularFrete({ cep: value, quantidade: items.length, valorDeclarado: subtotal });
+        setQuotes(result);
+        const firstValid = result.find(arrivesInTime);
+        setSelectedQuoteId(firstValid?.id ?? null);
+        if (result.length === 0) toast.error("Não encontramos frete para este CEP.");
+      } catch {
+        setQuotes([]);
+        setSelectedQuoteId(null);
+        toast.error("CEP inválido ou não encontrado.");
       }
     });
+  };
+
+  // Recalcula quando o CEP fica completo ou a quantidade de itens muda
+  useEffect(() => {
+    if (cep.length === 9) quote(cep);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cep, items.length]);
+
+  const applyCoupon = async () => {
+    const code = couponCode.trim();
+    if (!code) return;
+    setIsApplyingCoupon(true);
+    try {
+      const res = await fetch(`/api/coupons?code=${encodeURIComponent(code)}`);
+      if (!res.ok) {
+        toast.error(res.status === 404 ? "Cupom não encontrado." : (await res.text()) || "Cupom inválido.");
+        setCoupon(null);
+        return;
+      }
+      const data = await res.json();
+      setCoupon({ code: data.code, discountType: data.discountType, discountValue: Number(data.discountValue) });
+      toast.success(`Cupom ${data.code} aplicado!`);
+    } catch {
+      toast.error("Não foi possível validar o cupom.");
+    } finally {
+      setIsApplyingCoupon(false);
+    }
+  };
+
+  const openDatePicker = async (item: CartItem) => {
+    setDateItem(item);
+    setLoadingBookings(true);
+    try {
+      const res = await fetch(`/api/products/${item.id}/availability`);
+      setDateBookings(res.ok ? await res.json() : []);
+    } catch {
+      setDateBookings([]);
+    } finally {
+      setLoadingBookings(false);
+    }
+  };
+
+  // Com outro item já datado, o pedido inteiro fica naquela data
+  const otherItemsDate = dateItem
+    ? toDate(items.find((item) => item.eventDate && itemKey(item) !== itemKey(dateItem))?.eventDate)
+    : undefined;
+  const pickerShippingDays = selectedQuote?.delivery_time ?? (quotes.length ? Math.min(...quotes.map((q) => q.delivery_time)) : DEFAULT_SHIPPING_DAYS);
+
+  const chooseDate = (date?: Date) => {
+    if (!date || !dateItem) return;
+    cart.updateItemDate(dateItem.id, dateItem.contractType, date);
+    setDateItem(null);
   };
 
   const finalizarCompra = async () => {
-    // Verificar se todos os itens têm data definida
-    const itemsSemData = cart.items.filter(item => !item.eventDate);
-    
-    if (itemsSemData.length > 0) {
-      // Se houver itens sem data, configurar para abrir modal sequencialmente
-      setItemsWithoutDate(itemsSemData);
-      setCurrentItemIndex(0);
-      const firstItemWithoutDate = itemsSemData[0];
-      await fetchProductSchedules(firstItemWithoutDate.id);
-      setShowDateModal(true);
-      return;
-    }
-
-    // Verificar se há frete definido (selecionado ou já calculado nos itens)
-    if (!freteSelecionado && freteFromCart === 0) {
-      toast.error("Calcule o frete antes de finalizar a compra");
-      return;
-    }
-
+    if (!selectedQuote || !eventDate || missingDate || mixedDates) return;
     setIsCheckingOut(true);
-    setLoadingStep(0);
-
     try {
-      let buyer;
-
-      // Passo 1: Validando informações
-      setLoadingStep(1);
-      await new Promise(resolve => setTimeout(resolve, 800)); // Simular delay para UX
-
-      // 1. Criação ou obtenção do comprador
-      const buyerRes = await fetch("/api/buyers", {
+      const res = await fetch("/api/store/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          fullName: user.name,
-          email: user.email,
-          phone: "00000000000",
-          address: "Rua Exemplo",
-          city: "Cidade",
-          state: "UF",
-          neighborhood: "Bairro",
-          number: "123",
-          cep: cepDestino,
-          document: "00000000000",
-          complement: "Complemento",
+          items: items.map((item) => ({ productId: item.id, type: item.contractType, eventDate: item.eventDate })),
+          cep,
+          shippingServiceId: selectedQuote.id,
+          couponCode: coupon?.code,
         }),
       });
-
-      if (buyerRes.status === 409) {
-        const existingBuyer = await fetch(`/api/buyers?email=${user.email}`);
-        if (!existingBuyer.ok) throw new Error("Erro ao buscar comprador existente");
-        buyer = await existingBuyer.json();
-      } else if (!buyerRes.ok) {
-        const error = await buyerRes.text();
-        throw new Error("Erro ao criar comprador: " + error);
-      } else {
-        buyer = await buyerRes.json();
-      }
-
-      // Passo 2: Criando pedido
-      setLoadingStep(2);
-      await new Promise(resolve => setTimeout(resolve, 500));
-const orderRes = await fetch("/api/orders", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({
-    buyer,
-    order: {
-      isPaid: false,
-      paymentMethod: "N/S",
-      installments: 1,
-      status: "PENDING",
-      totalAmount: Number(total.toFixed(2)),
-      shippingMethod: freteSelecionado?.name || "Calculado no produto",
-      shippingCost: Number((freteSelecionado?.price || freteFromCart).toFixed(2)),
-      shippingTime: freteSelecionado?.delivery_time || 3,
-      eventDate: cart.items[0]?.eventDate || null,
-      couponId: cupomValido?.id || null,
-    },
-    orderItems: cart.items.map((item) => {
-      // USAR DIRETAMENTE O CARTPRICE - não recalcular!
-      const unitPrice = Number(item.cartPrice);
-
-      return {
-        productId: item.id,
-        quantity: 1,
-        type: item.contractType,
-        unitPrice: Number(unitPrice.toFixed(2)),
-        subtotal: Number(unitPrice.toFixed(2)),
-      };
-    }),
-  }),
-});
-
-      if (!orderRes.ok) {
-        const error = await orderRes.text();
-        throw new Error("Erro ao criar pedido: " + error);
-      }
-
-      const order = await orderRes.json();
-
-      // Passo 3: Preparando checkout
-      setLoadingStep(3);
-      await new Promise(resolve => setTimeout(resolve, 500));
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Não foi possível criar o pedido.");
 
       cart.removeAll();
-      
-      // Notificação de sucesso
-      toast.success("Pedido criado com sucesso!", {
-        description: "Redirecionando para o checkout...",
-        duration: 2000,
-      });
-      
-      router.push(`/cart/checkout/${order.id}`);
+      router.push(`/cart/checkout/${data.id}`);
     } catch (error) {
-      // Notificação de erro
-      toast.error("Erro ao processar pedido", {
-        description: "Verifique os dados e tente novamente.",
-        duration: 4000,
-      });
-      
-    } finally {
+      toast.error("Não foi possível finalizar", { description: (error as Error).message });
       setIsCheckingOut(false);
-      setLoadingStep(0);
     }
   };
 
-  // Função para confirmar a data selecionada no modal
-  const confirmarDataSelecionada = async () => {
-    if (!selectedDateForItem) return;
-    
-    // Atualizar o item atual com a data selecionada
-    const currentItem = itemsWithoutDate[currentItemIndex];
-    if (currentItem) {
-      cart.updateItemDate(currentItem.id, currentItem.contractType, selectedDateForItem);
-    }
-    
-    // Limpar a data selecionada
-    setSelectedDateForItem(undefined);
-    
-    // Verificar se há mais itens sem data
-    const nextIndex = currentItemIndex + 1;
-    if (nextIndex < itemsWithoutDate.length) {
-      // Há mais itens, processar o próximo
-      setCurrentItemIndex(nextIndex);
-      const nextItem = itemsWithoutDate[nextIndex];
-      await fetchProductSchedules(nextItem.id);
-      // Modal permanece aberto para o próximo item
-    } else {
-      // Todos os itens têm data agora, fechar modal e tentar finalizar
-      setShowDateModal(false);
-      setCurrentItemIndex(0);
-      setItemsWithoutDate([]);
-      
-      // Tentar finalizar compra novamente
-      setTimeout(() => {
-        finalizarCompra();
-      }, 100);
-    }
+  const whatsappMessage = () => {
+    let message = "Olá! Gostaria de finalizar meu pedido pelo WhatsApp:\n\n";
+    items.forEach((item, index) => {
+      message += `${index + 1}. *${item.name}* (${item.contractType === "RENTAL" ? "Aluguel" : "Compra"})\n`;
+      message += `   Código: ${item.sku || item.id} · ${item.color.name} · Tam. ${item.size.name}\n`;
+      message += `   ${formatter.format(item.cartPrice)}`;
+      if (item.eventDate) message += ` · ${format(new Date(item.eventDate), "dd/MM/yyyy")}`;
+      message += "\n";
+    });
+    if (selectedQuote) message += `\nFrete: ${selectedQuote.name} ${formatter.format(selectedQuote.price)} (CEP ${cep})`;
+    if (coupon) message += `\nCupom: ${coupon.code}`;
+    message += `\n*Total: ${formatter.format(total)}*`;
+    return message;
   };
+
+  const checkoutLabel = isCheckingOut
+    ? "Criando pedido..."
+    : items.length === 0
+      ? "Carrinho vazio"
+      : missingDate
+        ? "Escolha a data dos itens"
+        : mixedDates
+          ? "Use a mesma data em todos os itens"
+          : !selectedQuote
+            ? "Calcule o frete"
+            : "Continuar para pagamento";
+
+  if (mounted && items.length === 0) {
+    return (
+      <div className="mx-auto flex min-h-[60vh] max-w-md flex-col items-center justify-center px-4 text-center">
+        <ShoppingBag className="mb-4 h-12 w-12 text-muted-foreground" />
+        <h1 className="text-xl font-semibold">Seu carrinho está vazio</h1>
+        <p className="mt-2 text-sm text-muted-foreground">Escolha um vestido para alugar ou comprar.</p>
+        <Button asChild className="mt-6">
+          <Link href="/products">Ver catálogo</Link>
+        </Button>
+      </div>
+    );
+  }
 
   return (
-    <>
-      {/* Loading Overlay */}
-      {isCheckingOut  && (
-        <div className="fixed inset-0 bg-background/50 backdrop-blur-sm z-50 flex items-center justify-center">
-          <div className="bg-background rounded-2xl p-8 max-w-md w-full mx-4 text-center border border-muted">
-            
-            <h2 className="text-xl font-semibold mb-2">Processando seu pedido</h2>
-            <p className="text-foreground mb-6">
-              Estamos criando seu pedido e preparando tudo para você. 
-              Por favor, não feche esta página.
-            </p>
-            
-            <div className="relative w-full mb-8">
-              <div className="w-full rounded-full h-2 mb-4">
-                <Progress className="transition-all duration-500 ease-in-out" value={(loadingStep / 3) * 100}  />
-              </div>
-              <div 
-                className="absolute top-0 transform -translate-x-1/2 -translate-y-1/2 transition-all duration-500 ease-in-out"
-                style={{ left: `${(loadingStep / 3) * 100}%` }}
-              >
-                <div className="bg-primary rounded-full p-2">
-                  <ShoppingCart className="w-6 h-6 text-primary-foreground" />
-                </div>
-              </div>
-            </div>
-            
-            {/* Loading Steps */}
-            <div className="space-y-3 text-sm text-left">
-              <div className={`flex items-center gap-3 ${loadingStep >= 1 ? 'text-primary' : 'text-muted-foreground'}`}>
-                <div className={`w-3 h-3 rounded-full ${loadingStep >= 1 ? 'bg-primary' : 'bg-background'} 
-                  ${loadingStep === 1 ? 'animate-pulse' : ''}`} />
-                <span className={loadingStep >= 1 ? 'font-medium' : ''}>
-                  Validando informações do pedido
-                </span>
-                {loadingStep > 1 && (
-                  <Check className="w-4 h-4 text-emerald-500 ml-auto" />
-                )}
-              </div>
-              
-              <div className={`flex items-center gap-3 ${loadingStep >= 2 ? 'text-primary' : 'text-muted-foreground'}`}>
-                <div className={`w-3 h-3 rounded-full ${loadingStep >= 2 ? 'bg-primary' : 'bg-background'} 
-                  ${loadingStep === 2 ? 'animate-pulse' : ''}`} />
-                <span className={loadingStep >= 2 ? 'font-medium' : ''}>
-                  Criando pedido no sistema
-                </span>
-                {loadingStep > 2 && (
-                  <Check className="w-4 h-4 text-emerald-500 ml-auto" />
-                )}
-              </div>
-              
-              <div className={`flex items-center gap-3 ${loadingStep >= 3 ? 'text-primary' : 'text-muted-foreground'}`}>
-                <div className={`w-3 h-3 rounded-full ${loadingStep >= 3 ? 'bg-primary' : 'bg-background'} 
-                  ${loadingStep === 3 ? 'animate-pulse' : ''}`} />
-                <span className={loadingStep >= 3 ? 'font-medium' : ''}>
-                  Preparando página de checkout
-                </span>
-                {loadingStep > 3 && (
-                  <Check className="w-4 h-4 text-emerald-500 ml-auto" />
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+    <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 md:py-10">
+      <h1 className="mb-6 text-2xl font-bold">Carrinho</h1>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mt-25 m-5">{/* Resto do componente continua igual */}
-         {/* Cart items */}
-         <section className="lg:col-span-8 space-y-4 border rounded-2xl p-4">
-           <h2 className="text-lg font-bold">Carrinho</h2>
-           {cart.items.length === 0 && (
-             <p className="text-muted-foreground text-center mt-40">Seu carrinho está vazio.</p>
-           )}
-           {cart.items.map((item) => (
-             <div key={`${item.id}-${item.contractType}`} className=" grid sm:flex  items-start gap-4 p-4 border rounded-lg">
-               <div className="relative h-20 w-20 shrink-0 rounded-lg overflow-hidden">
-                 <Image
-                   src={item.images[0].url}
-                   alt={item.name}
-                   fill
-                   className="object-cover"
-                 />
-               </div>
-               <div className="flex-1 space-y-1">
-                 <div className="flex justify-between items-start">
-                   <div>
-                     <p className="font-medium">{item.name}</p>
-                     <p className="text-sm text-muted-foreground">
-                       {item.color.name} • {item.size.name}
-                     </p>
-                     <span className={cn(
-                       "inline-block px-2 py-1 rounded-full text-xs font-medium",
-                       item.contractType === "RENTAL" 
-                         ? "bg-orange-100 text-orange-800" 
-                         : "bg-green-100 text-green-800"
-                     )}>
-                       {item.contractType === "RENTAL" ? "Aluguel" : "Venda"}
-                     </span>
-                     {/* Mostrar informações adicionais do item */}
-                     {item.eventDate && (
-                       <p className="text-xs text-muted-foreground mt-1">
-                         {item.contractType === "RENTAL" ? "Evento" : "Entrega"}: {format(item.eventDate, "dd/MM/yyyy", { locale: ptBR })}
-                       </p>
-                     )}
-                     {item.cep && (
-                       <p className="text-xs text-muted-foreground">
-                         CEP: {item.cep}
-                       </p>
-                     )}
-                     {item.shippingPrice !== undefined && item.shippingPrice > 0 && (
-                       <p className="text-xs text-muted-foreground">
-                         Frete: {formatPrice(item.shippingPrice)}
-                       </p>
-                     )}
-                   </div>
-                   <div className="text-right">
-                     <span className="font-semibold">{formatPrice(item.cartPrice)}</span>
-                     {item.contractType === "RENTAL" && (
-                       <p className="text-xs text-muted-foreground line-through">
-                         {formatPrice(item.price)}
-                       </p>
-                     )}
-                     {item.totalPrice && item.totalPrice !== item.cartPrice && (
-                       <p className="text-xs font-medium text-primary">
-                         Total: {formatPrice(item.totalPrice)}
-                       </p>
-                     )}
-                   </div>
-                 </div>
-                 <div className="flex gap-4 text-sm mt-2">
-                   <button onClick={() => {}} className="text-primary underline">
-                     Salvar
-                   </button>
-                   <button
-                     onClick={() => cart.removeItem(item.id, item.contractType)}
-                     className="text-destructive underline"
-                   >
-                     Remover
-                   </button>
-                 </div>
-               </div>
-             </div>
-           ))}
-         </section>
-   
-         {/* Summary */}
-         <aside className="lg:col-span-4 space-y-6 border rounded-2xl p-4">
-           <h2 className="text-lg font-semibold">Resumo</h2>
-   
-           {/* Entrega */}
-           <div className="space-y-2">
-             <h3 className="font-medium">Entrega</h3>
-             
-   
-             {/* Popover de País */}
-             <Popover>
-               <PopoverTrigger asChild>
-                 <Button
-                   variant="outline"
-                   role="combobox"
-                   className="w-full justify-between"
-                 >
-                   {pais} <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
-                 </Button>
-               </PopoverTrigger>
-               <PopoverContent className="w-full p-0">
-                 <Command>
-                   <CommandInput placeholder="Buscar país..." className="h-9" />
-                   <CommandList>
-                     {countries.map((c) => (
-                       <CommandItem
-                         key={c}
-                         value={c}
-                         onSelect={() => setPais(c)}
-                       >
-                         {c}
-                         {pais === c ? (
-                           <Check className="ml-auto h-4 w-4" />
-                         ) : null}
-                       </CommandItem>
-                     ))}
-                   </CommandList>
-                 </Command>
-               </PopoverContent>
-             </Popover>
-   
-             {/* Campo de CEP */}
-             <div className="flex gap-2">
-               <input
-                 type="text"
-                 placeholder="Digite o CEP ou ZIP"
-                 value={cepDestino}
-                 onChange={(e) => setCepDestino(e.target.value)}
-                 className="flex-1 border rounded-lg px-3 py-2 text-sm"
-               />
-               <button
-                 onClick={buscarFretes}
-                 className="px-4 py-2 border rounded-lg text-sm"
-               >
-                 Buscar
-               </button>
-             </div>
-   
-             {isPending && (
-               <p className="text-sm text-muted-foreground">Buscando fretes...</p>
-             )}
-   
-             {fretes.length > 0 && (
-               <div className="space-y-2 mt-2">
-                 {fretes.map((frete) => (
-                   <button
-                     key={frete.id}
-                     onClick={() =>
-                       setFreteSelecionado({
-                         price: frete.price,
-                         name: frete.name,
-                         delivery_time: frete.delivery_time,
-                       })
-                     }
-                     className={cn(
-                       "w-full text-left px-3 py-2 border rounded-lg text-sm",
-                       freteSelecionado?.name === frete.name
-                         ? "border-primary font-medium"
-                         : "border-muted"
-                     )}
-                   >
-                     {frete.name} - R$ {frete.price.toFixed(2)} ({frete.delivery_time} dias úteis)
-                   </button>
-                 ))}
-               </div>
-             )}
-   
-             {freteSelecionado && (
-               <p className="text-sm text-muted-foreground">
-                 Selecionado: {freteSelecionado.name} –{" "}
-                 {formatPrice(freteSelecionado.price)} ({freteSelecionado.delivery_time} dias úteis)
-               </p>
-             )}
-             
-             {freteFromCart > 0 && !freteSelecionado && (
-               <p className="text-sm text-green-600">
-                 Frete já calculado: {formatPrice(freteFromCart)}
-               </p>
-             )}
-           </div>
-   
-           {/* Cupom */}
-           <div className="space-y-2">
-             <h3 className="font-medium">Cupom</h3>
-             <div className="flex gap-2">
-               <input
-                 type="text"
-                 value={promoCode}
-                 onChange={(e) => setPromoCode(e.target.value)}
-                 placeholder="Digite o cupom"
-                 className="flex-1 border rounded-lg px-3 py-2 text-sm"
-               />
-               <button
-                 onClick={handleApplyPromo}
-                 className="px-4 py-2 border rounded-lg text-sm"
-               >
-                 Aplicar
-               </button>
-             </div>
-             {promoApplied && cupomValido && (
-  <p className="text-xs text-emerald-600">
-    {cupomValido.discountType === "percentage"
-      ? `${cupomValido.discountValue}% de desconto aplicado!`
-      : `Desconto de ${formatPrice(cupomValido.discountValue)} aplicado!`}
-  </p>
-)}
-           </div>
-   
-           {/* Totais */}
-           <div className="space-y-1 text-sm">
-             <div className="flex justify-between">
-               <span>Subtotal</span>
-               <span>{formatPrice(subtotal)}</span>
-             </div>
-             <div className="flex justify-between">
-               <span>Desconto</span>
-               <span>-{formatPrice(discount)}</span>
-             </div>
-             <div className="flex justify-between">
-               <span>Entrega</span>
-               <span>{formatPrice(deliveryCost)}</span>
-             </div>
-             <div className="flex justify-between font-semibold pt-2 border-t mt-2">
-               <span>Total</span>
-               <span>{formatPrice(total)}</span>
-             </div>
-           </div>
-   
-           {/* Ações */}
-           <div>
-             <Button
-              onClick={finalizarCompra}
-              disabled={cart.items.length === 0 || (!freteSelecionado && freteFromCart === 0) || isCheckingOut}
-              className="w-full py-3 rounded-lg bg-primary disabled:opacity-50 mb-2"
-            >
-              {isCheckingOut ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Processando pedido...
-                </>
-              ) : cart.items.length === 0 ? (
-                "Carrinho vazio"
-              ) : !freteSelecionado && freteFromCart === 0 ? (
-                "Calcule o frete"
-              ) : cart.items.some(item => !item.eventDate) ? (
-                "Selecionar datas"
-              ) : (
-                "Finalizar compra"
+      <div className="grid gap-6 lg:grid-cols-12 lg:gap-8">
+        {/* Itens */}
+        <section className="space-y-3 lg:col-span-7">
+          {items.map((item) => {
+            const date = toDate(item.eventDate);
+            const period = item.contractType === "RENTAL" && date ? getRentalUsePeriod(date) : null;
+            return (
+              <article key={itemKey(item)} className="flex gap-3 rounded-xl border p-3 sm:gap-4 sm:p-4">
+                <Link
+                  href={`/product/${item.id}`}
+                  className="relative aspect-[4/5] w-20 shrink-0 overflow-hidden rounded-lg bg-muted sm:w-24"
+                >
+                  <Image src={item.images[0]?.url ?? "/placeholder.svg"} alt={item.name} fill className="object-cover" sizes="96px" />
+                </Link>
+
+                <div className="flex min-w-0 flex-1 flex-col gap-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="truncate font-medium">{item.name}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {item.color.name} • {item.size.name}
+                      </p>
+                    </div>
+                    <p className="shrink-0 font-semibold">{formatter.format(item.cartPrice)}</p>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2 text-xs">
+                    <span
+                      className={cn(
+                        "rounded-full px-2 py-0.5 font-medium",
+                        item.contractType === "RENTAL" ? "bg-orange-100 text-orange-800" : "bg-green-100 text-green-800"
+                      )}
+                    >
+                      {item.contractType === "RENTAL" ? "Aluguel" : "Compra"}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => openDatePicker(item)}
+                      className={cn(
+                        "inline-flex items-center gap-1 rounded-full border px-2 py-0.5",
+                        !date && "border-destructive text-destructive"
+                      )}
+                    >
+                      <CalendarIcon className="h-3 w-3" />
+                      {date
+                        ? `${item.contractType === "RENTAL" ? "Evento" : "Entrega"}: ${format(date, "dd/MM/yyyy")}`
+                        : "Escolher data"}
+                    </button>
+                  </div>
+
+                  {period && (
+                    <p className="text-xs text-muted-foreground">
+                      Com você de {format(period.from, "dd/MM")} a {format(period.to, "dd/MM")}
+                    </p>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => cart.removeItem(item.id, item.contractType)}
+                    className="mt-auto inline-flex w-fit items-center gap-1 text-sm text-muted-foreground hover:text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4" /> Remover
+                  </button>
+                </div>
+              </article>
+            );
+          })}
+          {mixedDates && (
+            <p className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
+              Os itens estão com datas diferentes. Cada pedido tem uma única data: ajuste as datas ou finalize um
+              pedido por vez.
+            </p>
+          )}
+        </section>
+
+        {/* Resumo */}
+        <aside className="h-fit space-y-6 rounded-xl border p-4 sm:p-5 lg:sticky lg:top-24 lg:col-span-5">
+          <div className="space-y-2">
+            <Label htmlFor="cart-cep">Frete</Label>
+            <div className="relative">
+              <Input
+                id="cart-cep"
+                inputMode="numeric"
+                autoComplete="postal-code"
+                placeholder="CEP de entrega"
+                value={cep}
+                onChange={(e) => setCep(formatCep(e.target.value))}
+                className="pr-10"
+              />
+              {isQuoting && (
+                <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
               )}
-            </Button>            
-             
-             {/* Botão WhatsApp */}
-             <Button
-               onClick={handleWhatsAppRedirect}
-               disabled={cart.items.length === 0 || isCheckingOut}
-               variant="outline"
-               className="w-full py-3 rounded-lg border border-green-500 text-green-600 hover:bg-green-50 disabled:opacity-50 mb-2"
-             >
-               <FaWhatsapp className="w-4 h-4 mr-2" />
-               Continuar pelo WhatsApp
-             </Button>
-             
-             <Link href="/products">
-             <Button 
-               variant={"outline"} 
-               className="w-full py-3 rounded-lg border" 
-               disabled={isCheckingOut}
-             > 
-               Continuar comprando 
-             </Button>
-             </Link>
-           </div>
-         </aside>
-       </div>
-       
-       {/* Modal de Seleção de Data */}
-       <Dialog open={showDateModal} onOpenChange={setShowDateModal}>
-         <DialogContent className="sm:max-w-md">
-           <DialogHeader>
-             <DialogTitle>
-               Selecione a Data ({currentItemIndex + 1} de {itemsWithoutDate.length})
-             </DialogTitle>
-             <DialogDescription>
-               {itemsWithoutDate[currentItemIndex] && (
-                 <>
-                   Selecione a data de {itemsWithoutDate[currentItemIndex].contractType === "RENTAL" ? "evento" : "entrega"} para o produto{" "}
-                   <strong>{itemsWithoutDate[currentItemIndex].name}</strong>
-                 </>
-               )}
-             </DialogDescription>
-           </DialogHeader>
-           
-           <div className="space-y-4">
-             {loadingSchedules ? (
-               <div className="flex items-center justify-center py-8">
-                 <Loader2 className="w-6 h-6 animate-spin" />
-                 <span className="ml-2">Carregando disponibilidade...</span>
-               </div>
-             ) : (
-               <>
-                 <div className="space-y-2">
-                   <Label>Data de {itemsWithoutDate[currentItemIndex]?.contractType === "RENTAL" ? "Evento" : "Entrega"}</Label>
-                   <Popover>
-                     <PopoverTrigger asChild>
-                       <Button
-                         variant="outline"
-                         className={cn(
-                           "w-full justify-start text-left font-normal",
-                           !selectedDateForItem && "text-muted-foreground"
-                         )}
-                       >
-                         <CalendarIcon className="mr-2 h-4 w-4" />
-                         {selectedDateForItem ? (
-                           format(selectedDateForItem, "PPP", { locale: ptBR })
-                         ) : (
-                           "Selecione uma data"
-                         )}
-                       </Button>
-                     </PopoverTrigger>
-                     <PopoverContent className="w-auto p-0" align="start">
-                       <Calendar
-                         mode="single"
-                         selected={selectedDateForItem}
-                         onSelect={setSelectedDateForItem}
-                         disabled={(date) => {
-                           const currentItem = itemsWithoutDate[currentItemIndex];
-                           return currentItem ? !isDateAvailable(date, currentItem.contractType) : true;
-                         }}
-                         initialFocus
-                       />
-                     </PopoverContent>
-                   </Popover>
-                   
-                   {itemsWithoutDate[currentItemIndex]?.contractType === "RENTAL" && selectedDateForItem && (
-                     <p className="text-sm text-muted-foreground">
-                       Período de uso: {format(subDays(selectedDateForItem, 3), "dd/MM", { locale: ptBR })} a {format(addDays(selectedDateForItem, 3), "dd/MM", { locale: ptBR })}
-                     </p>
-                   )}
-                 </div>
-                 
-                 <div className="flex gap-2 pt-4">
-                   <Button
-                     variant="outline"
-                     onClick={() => {
-                       setShowDateModal(false);
-                       setCurrentItemIndex(0);
-                       setItemsWithoutDate([]);
-                       setSelectedDateForItem(undefined);
-                     }}
-                     className="flex-1"
-                   >
-                     Cancelar
-                   </Button>
-                   <Button
-                     onClick={confirmarDataSelecionada}
-                     disabled={!selectedDateForItem}
-                     className="flex-1"
-                   >
-                     {currentItemIndex + 1 < itemsWithoutDate.length ? "Próximo Item" : "Finalizar"}
-                   </Button>
-                 </div>
-               </>
-             )}
-           </div>
-         </DialogContent>
-       </Dialog>
-    </>
+            </div>
+
+            {quotes.length > 0 && (
+              <div className="space-y-2" role="radiogroup" aria-label="Opções de frete">
+                {quotes.map((option) => {
+                  const inTime = arrivesInTime(option);
+                  return (
+                    <button
+                      key={option.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={selectedQuoteId === option.id}
+                      disabled={!inTime}
+                      onClick={() => setSelectedQuoteId(option.id)}
+                      className={cn(
+                        "flex w-full items-center justify-between gap-3 rounded-lg border px-3 py-2 text-left text-sm transition disabled:cursor-not-allowed disabled:opacity-50",
+                        selectedQuoteId === option.id && inTime ? "border-foreground ring-1 ring-foreground" : "hover:border-foreground/50"
+                      )}
+                    >
+                      <span className="flex min-w-0 items-center gap-2">
+                        <Truck className="h-4 w-4 shrink-0 text-muted-foreground" />
+                        <span className="min-w-0">
+                          <span className="block truncate font-medium">{option.name}</span>
+                          <span className="block text-xs text-muted-foreground">
+                            {inTime ? `${option.delivery_time} dias úteis` : "Não chega antes da data"}
+                          </span>
+                        </span>
+                      </span>
+                      <span className="shrink-0 font-medium">{formatter.format(option.price)}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="cart-coupon">Cupom</Label>
+            <div className="flex gap-2">
+              <Input
+                id="cart-coupon"
+                value={couponCode}
+                onChange={(e) => setCouponCode(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && applyCoupon()}
+                placeholder="Código do cupom"
+              />
+              <Button variant="outline" onClick={applyCoupon} disabled={isApplyingCoupon || !couponCode.trim()}>
+                {isApplyingCoupon ? <Loader2 className="h-4 w-4 animate-spin" /> : "Aplicar"}
+              </Button>
+            </div>
+            {coupon && (
+              <p className="text-xs text-emerald-600">
+                {coupon.code}:{" "}
+                {coupon.discountType === "percentage"
+                  ? `${coupon.discountValue}% de desconto`
+                  : `${formatter.format(coupon.discountValue)} de desconto`}
+              </p>
+            )}
+          </div>
+
+          <dl className="space-y-1 text-sm">
+            <div className="flex justify-between">
+              <dt>Subtotal</dt>
+              <dd>{formatter.format(subtotal)}</dd>
+            </div>
+            {discount > 0 && (
+              <div className="flex justify-between text-emerald-600">
+                <dt>Desconto</dt>
+                <dd>-{formatter.format(discount)}</dd>
+              </div>
+            )}
+            <div className="flex justify-between">
+              <dt>Frete</dt>
+              <dd>{selectedQuote ? formatter.format(selectedQuote.price) : "—"}</dd>
+            </div>
+            <div className="mt-2 flex justify-between border-t pt-2 text-base font-semibold">
+              <dt>Total</dt>
+              <dd>{formatter.format(total)}</dd>
+            </div>
+          </dl>
+
+          <div className="space-y-2">
+            <Button
+              size="lg"
+              className="h-12 w-full"
+              onClick={finalizarCompra}
+              disabled={isCheckingOut || !selectedQuote || missingDate || mixedDates || items.length === 0}
+            >
+              {isCheckingOut && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {checkoutLabel}
+            </Button>
+            <Button
+              asChild
+              variant="outline"
+              size="lg"
+              className="h-12 w-full border-green-500 text-green-700 hover:bg-green-50"
+            >
+              <a href={whatsappLink(whatsappMessage())} target="_blank" rel="noopener noreferrer">
+                <FaWhatsapp className="mr-2 h-4 w-4" /> Finalizar pelo WhatsApp
+              </a>
+            </Button>
+            <Button asChild variant="ghost" className="w-full">
+              <Link href="/products">Continuar comprando</Link>
+            </Button>
+          </div>
+        </aside>
+      </div>
+
+      <Dialog open={!!dateItem} onOpenChange={(open) => !open && setDateItem(null)}>
+        <DialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{dateItem?.contractType === "RENTAL" ? "Data do evento" : "Data de entrega"}</DialogTitle>
+            <DialogDescription>
+              {dateItem?.name}
+              {otherItemsDate && " · os outros itens do carrinho estão nesta data"}
+            </DialogDescription>
+          </DialogHeader>
+          {loadingBookings ? (
+            <div className="flex items-center justify-center py-10">
+              <Loader2 className="h-6 w-6 animate-spin" />
+            </div>
+          ) : (
+            dateItem && (
+              <Calendar
+                mode="single"
+                locale={ptBR}
+                className="mx-auto"
+                selected={toDate(dateItem.eventDate) ?? otherItemsDate}
+                defaultMonth={toDate(dateItem.eventDate) ?? otherItemsDate}
+                onSelect={chooseDate}
+                disabled={(date) =>
+                  (!!otherItemsDate && !isSameEventDay(date, otherItemsDate)) ||
+                  !isDateAvailable({
+                    date,
+                    contractType: dateItem.contractType,
+                    bookings: dateBookings,
+                    shippingDays: pickerShippingDays,
+                  })
+                }
+              />
+            )
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }

@@ -1,6 +1,7 @@
 "use server";
 
 import { db } from "@/lib/db";
+import { assertStaff } from "@/lib/auth";
 import { startOfDay, endOfDay } from "date-fns";
 import { headers } from "next/headers";
 import { subDays, format } from "date-fns"
@@ -57,6 +58,9 @@ type TimeRange = "7d" | "30d" | "90d"
 export async function getVisitorsData(
   timeRange: TimeRange
 ): Promise<{ date: string; desktop: number; mobile: number }[]> {
+  // Dados do painel; registerVisitor continua público
+  await assertStaff();
+
   let days = 90
   if (timeRange === "30d") days = 30
   if (timeRange === "7d") days = 7

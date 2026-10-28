@@ -8,6 +8,7 @@ import { RegisterSchema } from "@/schemas";
 import { getUserByEmail } from "@/data/user";
 import { generateVerificationToken } from "@/lib/tokens";
 import { sendVerificationEmail } from "@/lib/mail";
+import { RATE_LIMITS, getClientIp, rateLimit, tooManyAttemptsMessage } from "@/lib/rate-limit";
 
 export const register = async (values: z.infer<typeof RegisterSchema>) => {
   const validatedFields = RegisterSchema.safeParse(values);
@@ -17,6 +18,13 @@ export const register = async (values: z.infer<typeof RegisterSchema>) => {
   }
 
   const { email, password, name } = validatedFields.data;
+
+  // Barra criação de contas em massa (cada cadastro dispara um e-mail)
+  const attempt = await rateLimit(`register:ip:${await getClientIp()}`, RATE_LIMITS.register);
+  if (!attempt.success) {
+    return { error: tooManyAttemptsMessage(attempt) }
+  }
+
   const hashedPassword = await bcrypt.hash(password, 10);
 
   const existingUser = await getUserByEmail(email);

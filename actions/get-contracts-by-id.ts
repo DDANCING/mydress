@@ -1,5 +1,6 @@
 "use server";
 
+import { assertStaff } from "@/lib/auth";
 import { db } from "@/lib/db";
 
 interface GetContractsByIdInput {
@@ -52,6 +53,7 @@ function serializeContract(contract: any): any {
 
 export async function getContractsById({ contractId }: GetContractsByIdInput) {
   try {
+    await assertStaff();
     if (!contractId) {
       return { error: "ID do contrato é obrigatório." };
     }

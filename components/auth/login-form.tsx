@@ -55,10 +55,10 @@ export const LoginForm = () => {
       login(values, callbackUrl)
         .then((data) => {
           if (data?.error) {
-            form.reset();
+            // Mantém o e-mail digitado; limpa só a senha ou o código
+            form.resetField(showTwoFactor ? "code" : "password");
             setError(data.error);
-            toast.error("Credenciais inválidas", {
-          description: "Verifique seu e-mail e senha e tente novamente",
+            toast.error(data.error, {
           action: {
             label: "Fechar",
             onClick: () => console.log("Undo"),

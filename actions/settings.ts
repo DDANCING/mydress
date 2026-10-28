@@ -8,11 +8,19 @@ import { getUserByEmail, getUserById } from "@/data/user";
 import { currentUser } from "@/lib/auth";
 import { generateVerificationToken } from "@/lib/tokens";
 import { sendVerificationEmail } from "@/lib/mail";
+import { RATE_LIMITS, rateLimit, tooManyAttemptsMessage } from "@/lib/rate-limit";
 
 
 export const settings = async (
-  values: z.infer<typeof SettingsSchema>
+  input: z.infer<typeof SettingsSchema>
 ) => {
+  // Server action aceita qualquer objeto: valida e usa só os campos do schema (nada de role, emailVerified...)
+  const parsed = SettingsSchema.safeParse(input);
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Dados inválidos" }
+  }
+  const values = parsed.data;
+
   const user = await currentUser();
 
   if (!user) {
@@ -31,11 +39,16 @@ export const settings = async (
     values.isTwoFactorEnabled = undefined;
   }
 
- if ( values.email && values.email !== user.email) {
+ if ( values.email && values.email !== user.email?.toLowerCase()) {
    const existingUser = await getUserByEmail(values.email)
 
    if (existingUser && existingUser.id !== user.id) {
     return { error: "Email alredy in use! "}
+   }
+
+   const sending = await rateLimit(`email:change:${user.id}`, RATE_LIMITS.sendEmail);
+   if (!sending.success) {
+    return { error: tooManyAttemptsMessage(sending) }
    }
 
    const verificationToken = await generateVerificationToken(
@@ -49,7 +62,14 @@ export const settings = async (
    return { success: "Verification email sent!"}
  }
 
+ // Só grava senha nova já com hash (nunca o texto enviado pelo formulário)
+ let hashedPassword: string | undefined;
  if (values.password && values.newPassword && dbUser.password) {
+  const attempt = await rateLimit(`password:change:${user.id}`, RATE_LIMITS.passwordChange);
+  if (!attempt.success) {
+    return { error: tooManyAttemptsMessage(attempt) }
+  }
+
   const passwordsMatch = await bcrypt.compare(
     values.password,
     dbUser.password,
@@ -59,18 +79,18 @@ export const settings = async (
     return { error: "Incorrect password!"}
   }
 
-  const hashedPassword = await bcrypt.hash(
+  hashedPassword = await bcrypt.hash(
     values.newPassword,
     10,
   );
-  values.password = hashedPassword;
-  values.newPassword = undefined; 
  }
 
   await db.user.update({
     where: { id: dbUser.id },
-    data : { 
-      ...values,
+    data : {
+      name: values.name,
+      isTwoFactorEnabled: values.isTwoFactorEnabled,
+      password: hashedPassword,
     }
   });
 

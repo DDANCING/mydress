@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { CheckCircle, Calendar, Package, CreditCard, Truck, ArrowRight } from "lucide-react";
+import { CheckCircle, Calendar, Clock, Package, CreditCard, Truck, ArrowRight } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -25,6 +25,8 @@ interface OrderSuccessProps {
     status: string;
     isPaid: boolean;
     createdAt: Date;
+    // Desconto calculado no servidor (mesma regra usada na cobrança)
+    discount: number;
     buyer: {
       id: string;
       fullName: string;
@@ -114,13 +116,7 @@ const OrderSuccess: React.FC<OrderSuccessProps> = ({ order }) => {
     }
   };
 
-  const discount = order.coupon
-    ? order.coupon.discountType === "fixed"
-      ? order.coupon.discountValue
-      : order.coupon.discountType === "percentage"
-      ? baseTotal * (order.coupon.discountValue / 100)
-      : 0
-    : 0;
+  const discount = order.discount;
 
   // Calcular com base nos valores reais do pedido
   const subtotalBeforeDiscount = baseTotal;
@@ -131,20 +127,37 @@ const OrderSuccess: React.FC<OrderSuccessProps> = ({ order }) => {
   const finalTotal = orderTotal > 0 ? orderTotal : (subtotalAfterDiscount + shippingCost);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-background p-6">
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-background px-4 py-6 sm:p-6 dark:from-emerald-950/20">
       <div className="max-w-4xl mx-auto">
         {/* Header de Sucesso */}
         <div className="text-center mb-8 mt-20">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-green-100 rounded-full mb-4">
-            <CheckCircle className="w-10 h-10 text-emerald-600" />
-          </div>
-          <h1 className="text-3xl font-bold text-foreground mb-2">
-            Pagamento Confirmado!
-          </h1>
-          <p className="text-lg text-foreground mb-2">
-            Olá <span className="font-semibold">{order.buyer.fullName}</span>, seu pedido foi processado com sucesso.
-          </p>
-          <p className="text-sm text-muted/80">
+          {order.isPaid ? (
+            <>
+              <div className="inline-flex items-center justify-center w-20 h-20 bg-green-100 rounded-full mb-4">
+                <CheckCircle className="w-10 h-10 text-emerald-600" />
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">
+                Pagamento confirmado!
+              </h1>
+              <p className="text-base sm:text-lg text-foreground mb-2">
+                Olá <span className="font-semibold">{order.buyer.fullName}</span>, seu pedido foi processado com sucesso.
+              </p>
+            </>
+          ) : (
+            <>
+              <div className="inline-flex items-center justify-center w-20 h-20 bg-amber-100 rounded-full mb-4">
+                <Clock className="w-10 h-10 text-amber-600" />
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">
+                Aguardando pagamento
+              </h1>
+              <p className="text-base sm:text-lg text-foreground mb-2">
+                Olá <span className="font-semibold">{order.buyer.fullName}</span>, seu pedido está reservado. Assim que o
+                boleto ou Pix for compensado, o pedido é confirmado.
+              </p>
+            </>
+          )}
+          <p className="text-sm text-muted-foreground">
             Pedido #{order.id.split('-')[0].toUpperCase()}
           </p>
         </div>
@@ -163,8 +176,8 @@ const OrderSuccess: React.FC<OrderSuccessProps> = ({ order }) => {
               <CardContent className="space-y-4">
                 {order.orderItems.map((item, index) => (
                   <div key={item.id}>
-                    <div className="flex items-center gap-4">
-                      <div className="relative w-16 h-16 rounded-lg overflow-hidden">
+                    <div className="flex items-center gap-3 sm:gap-4">
+                      <div className="relative w-16 h-16 shrink-0 rounded-lg overflow-hidden">
                         <Image
                           src={item.product.images[0]?.url || "/placeholder-product.jpg"}
                           alt={item.product.name}
@@ -172,8 +185,8 @@ const OrderSuccess: React.FC<OrderSuccessProps> = ({ order }) => {
                           className="object-cover"
                         />
                       </div>
-                      <div className="flex-1">
-                        <h3 className="font-medium text-foreground">
+                      <div className="min-w-0 flex-1">
+                        <h3 className="truncate font-medium text-foreground">
                           {item.product.name}
                         </h3>
                         <p className="text-sm text-muted-foreground">
@@ -184,7 +197,7 @@ const OrderSuccess: React.FC<OrderSuccessProps> = ({ order }) => {
                             {item.type === "SALE" ? "Venda" : "Aluguel"}
                           </Badge>
                           <span className="text-sm text-muted-foreground">
-                            Qty: {item.quantity}
+                            Qtd: {item.quantity}
                           </span>
                         </div>
                       </div>
@@ -216,7 +229,7 @@ const OrderSuccess: React.FC<OrderSuccessProps> = ({ order }) => {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-4 sm:grid-cols-2">
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">Endereço</p>
                     <p className="text-muted-foreground">
@@ -308,9 +321,9 @@ const OrderSuccess: React.FC<OrderSuccessProps> = ({ order }) => {
                 <div className="flex items-start gap-3">
                   <div className="w-2 h-2 bg-emerald-600 rounded-full mt-2"></div>
                   <div>
-                    <p className="font-medium">Confirmação por Email</p>
+                    <p className="font-medium">Acompanhe o pedido</p>
                     <p className="text-sm text-muted-foreground">
-                      Enviamos os detalhes do pedido para {order.buyer.email}
+                      O status fica sempre atualizado em Meus Pedidos
                     </p>
                   </div>
                 </div>

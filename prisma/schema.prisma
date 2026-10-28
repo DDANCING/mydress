@@ -569,3 +569,12 @@ enum UserRole {
   OWNER
 }
 
+
+// Contadores do limite de tentativas (login, cadastro, cupons...). Cada linha é uma janela de tempo por chave.
+model RateLimit {
+  key     String   @id
+  count   Int      @default(0)
+  resetAt DateTime
+
+  @@index([resetAt])
+}

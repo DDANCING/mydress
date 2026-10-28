@@ -2,7 +2,7 @@
 
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
-import { NextResponse } from "next/server";
+import { RATE_LIMITS, rateLimit, tooManyAttemptsMessage } from "@/lib/rate-limit";
 
 interface TestimonialInput {
   productId: string;
@@ -13,7 +13,7 @@ interface TestimonialInput {
 export async function createTestimonial({ productId, stars, quote }: TestimonialInput) {
   try {
     // Validate input
-    if (!productId || typeof stars !== "number" || stars < 1 || stars > 5 || !quote || quote.trim().length < 2) {
+    if (!productId || typeof stars !== "number" || stars < 1 || stars > 5 || !Number.isInteger(stars) || typeof quote !== "string" || quote.trim().length < 2 || quote.length > 1000) {
       return { error: "Dados inválidos para o depoimento." };
     }
 
@@ -23,6 +23,11 @@ export async function createTestimonial({ productId, stars, quote }: Testimonial
 
     if (!userId) {
       return { error: "É necessário estar logado para enviar um depoimento." };
+    }
+
+    const attempt = await rateLimit(`testimonial:user:${userId}`, RATE_LIMITS.testimonial);
+    if (!attempt.success) {
+      return { error: tooManyAttemptsMessage(attempt) };
     }
 
     // Prevent duplicate testimonial by user for the same product
@@ -39,7 +44,7 @@ export async function createTestimonial({ productId, stars, quote }: Testimonial
         userId,
         productId,
         stars,
-        quote,
+        quote: quote.trim(),
       }
     });
 
@@ -66,8 +71,7 @@ export async function createTestimonial({ productId, stars, quote }: Testimonial
     return { success: true, testimonial };
 
   } catch (error: any) {
--    new NextResponse('[TESTIMONIAL_CREATE]', error);
-+    console.error('[TESTIMONIAL_CREATE]', error);
+    console.error('[TESTIMONIAL_CREATE]', error);
     return { error: "Erro interno do servidor ao criar depoimento." };
   }
 }

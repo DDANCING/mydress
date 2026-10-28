@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { requireStaff } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { Prisma } from "@prisma/client";
 
@@ -16,13 +16,9 @@ export async function POST(req: Request) {
   try {
     console.log('[ORDER_POST] Starting order creation...');
     
-    const session = await auth();
-    const userId = session?.user?.id;
-
-    if (!userId) {
-      console.log('[ORDER_POST] Unauthenticated - no userId');
-      return new NextResponse("Unauthenticated", { status: 401 });
-    }
+    // Rota do painel. A loja cria pedidos por /api/store/orders, que calcula os valores no servidor.
+    const denied = await requireStaff();
+    if (denied) return denied;
 
     const body = await req.json();
     console.log('[ORDER_POST] Received payload:', JSON.stringify(body, null, 2));

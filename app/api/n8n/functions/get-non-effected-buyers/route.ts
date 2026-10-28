@@ -14,7 +14,8 @@ export async function GET(req: Request) {
   try {
     const synapseSecret = req.headers.get("X-Synapse-Secret");
 
-    if (synapseSecret !== process.env.SYNAPSE_SECRET) {
+    // Sem SYNAPSE_SECRET configurado a rota fica fechada (antes, header ausente == env ausente liberava)
+    if (!process.env.SYNAPSE_SECRET || synapseSecret !== process.env.SYNAPSE_SECRET) {
       return new NextResponse("Invalid or missing Synapse Secret", {
         status: 403,
       });

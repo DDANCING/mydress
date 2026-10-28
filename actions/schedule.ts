@@ -1,11 +1,13 @@
 "use server"
 
+import { assertStaff } from "@/lib/auth";
 import { db } from "@/lib/db"
 import { CalendarEvent, EventColor } from "@/components/event-calendar/types"
 import { getTagColor } from "@/lib/schedule-tags"
 
 export async function getSchedules(): Promise<CalendarEvent[]> {
   try {
+    await assertStaff();
     const schedules = await db.schedule.findMany({
       include: {
         seller: {
@@ -163,6 +165,7 @@ export async function getSchedules(): Promise<CalendarEvent[]> {
 
 export async function getSellers() {
   try {
+    await assertStaff();
     const sellers = await db.seller.findMany({
       include: {
         user: true,
@@ -182,6 +185,7 @@ export async function getSellers() {
 
 export async function getProducts() {
   try {
+    await assertStaff();
     const products = await db.product.findMany({
       where: {
         isArchived: false,
@@ -224,6 +228,7 @@ export async function createSchedule(data: {
   tags?: string[]
 }): Promise<CalendarEvent> {
   try {
+    await assertStaff();
     const schedule = await db.schedule.create({
       data: {
         title: data.title, // Salvar o título fornecido
@@ -296,6 +301,7 @@ export async function updateSchedule(
   }
 ): Promise<CalendarEvent> {
   try {
+    await assertStaff();
     const schedule = await db.schedule.update({
       where: { id },
       data: {
@@ -426,6 +432,7 @@ export async function updateSchedule(
 
 export async function deleteSchedule(id: string): Promise<void> {
   try {
+    await assertStaff();
     await db.schedule.delete({
       where: { id },
     })

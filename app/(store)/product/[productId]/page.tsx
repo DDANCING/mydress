@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
+import { getProductBookings } from "@/lib/store-orders";
 
 interface CategoryIdPageProps {
   params: Promise<{ productId: string }>;
@@ -34,33 +35,8 @@ const page = async ({ params }: CategoryIdPageProps) => {
     },
   });
 
-  const schedules = await db.contract.findMany({
-    where: {
-      contractItems: {
-        some: {
-          productId: productId
-        }
-      },
-      status: {
-        in: ["CONFIRMED", "DELIVERED"]
-      }
-    },
-    include: {
-      contractItems: {
-        where: {
-          productId: productId
-        }
-      }
-    }
-  });
-
-  const mappedSchedules = schedules
-    .map(contract => ({
-      id: contract.id,
-      eventDate: contract.eventDate || contract.deliveryDate,
-      contractType: contract.type === "SALE" || contract.type === "ClothingSALE" ? "SALE" as const : "RENTAL" as const
-    }))
-    .filter(schedule => schedule.eventDate !== null);
+  // Contratos do painel + pedidos do site (pagos, boletos em aberto e checkouts em andamento)
+  const bookings = (await getProductBookings([productId])).get(productId) ?? [];
 
   const isInWishlist = wishlistItems.length > 0;
 
@@ -84,7 +60,7 @@ const page = async ({ params }: CategoryIdPageProps) => {
             </h1>
             <p>
               Para mais informações, entre em{" "}
-              <a href="/contato" className="text-blue-600 underline font-medium">
+              <a href="/contact" className="text-blue-600 underline font-medium">
                 contato
               </a>.
             </p>
@@ -102,7 +78,7 @@ const page = async ({ params }: CategoryIdPageProps) => {
           wishlist={isInWishlist}
           product={mappedProduct}
           suggestedProducts={mappedSuggestedProducts}
-          schedules={mappedSchedules}
+          bookings={bookings}
         />
       </div>
     );
@@ -115,7 +91,7 @@ const page = async ({ params }: CategoryIdPageProps) => {
         wishlist={isInWishlist}
         product={mappedProduct}
         suggestedProducts={mappedSuggestedProducts}
-        schedules={mappedSchedules}
+        bookings={bookings}
       />
     </div>
   );

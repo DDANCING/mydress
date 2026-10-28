@@ -11,10 +11,9 @@ export type SafeProduct = Omit<Product, "price" | "originalPrice"> & {
 export interface CartItem extends StoreProduct {
   contractType: "SALE" | "RENTAL";
   cartPrice: number; // Preço específico para o carrinho (pode ser diferente do preço original)
-  eventDate?: Date; // Data do evento (para aluguel) ou entrega (para venda)
-  cep?: string; // CEP de entrega
-  shippingPrice?: number; // Preço do frete
-  totalPrice: number; // Preço total incluindo frete
+  // Data do evento (aluguel) ou de entrega (venda). Vem como texto quando o carrinho é lido do localStorage.
+  eventDate?: Date | string;
+  cep?: string; // CEP informado na página do produto (preenche o cálculo de frete do carrinho)
 }
 
 export type SafeOrder = {

@@ -1,5 +1,6 @@
 "use server";
 
+import { assertStaff } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 
@@ -14,6 +15,7 @@ export async function createMarketingExpense(
   input: CreateMarketingExpenseInput
 ) {
   try {
+    await assertStaff();
     // Validação
     if (!input.duration || input.duration < 1) {
       throw new Error("Duration deve ser pelo menos 1 dia");
@@ -52,6 +54,7 @@ export async function createMarketingExpense(
 
 export async function getMarketingExpenses() {
   try {
+    await assertStaff();
     const expenses = await db.marketingExpense.findMany({
       orderBy: {
         createdAt: "desc",
@@ -71,6 +74,7 @@ export async function getMarketingExpenses() {
 
 export async function deleteMarketingExpense(id: string) {
   try {
+    await assertStaff();
     await db.marketingExpense.delete({
       where: { id },
     });
@@ -91,6 +95,7 @@ export async function updateMarketingExpense(
   input: CreateMarketingExpenseInput
 ) {
   try {
+    await assertStaff();
     // Validação
     if (!input.duration || input.duration < 1) {
       throw new Error("Duration deve ser pelo menos 1 dia");

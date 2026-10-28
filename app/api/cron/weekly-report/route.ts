@@ -7,7 +7,8 @@ export async function GET(request: NextRequest) {
   try {
     // Verifica o token no header Authorization
     const authHeader = request.headers.get('authorization');
-    if (!authHeader || authHeader !== `Bearer ${CRON_SECRET}`) {
+    // Sem CRON_SECRET configurado, "Bearer undefined" não pode servir de senha
+    if (!CRON_SECRET || !authHeader || authHeader !== `Bearer ${CRON_SECRET}`) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

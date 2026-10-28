@@ -23,6 +23,7 @@ export const publicRoutes = [
   "/api/uploadthing",
   "/api/webhook",
   "/api/products",
+  "/api/products/:productId/availability",
   "/api/webhooks/stripe",
   "/api/auth/callback",
   "/api/coupons",
@@ -47,6 +48,30 @@ export const publicRoutes = [
   "/payment-methods",
   "/contact",
 ];
+/**
+ * APIs que qualquer cliente logada pode usar (cada rota confere se o dado é dela).
+ * Todas as outras APIs fora de publicRoutes são exclusivas da equipe (ADMIN, OWNER, SELLER).
+ */
+export const customerApiRoutes = [
+  "/api/store/orders",
+  "/api/checkout",
+  "/api/testimonials",
+  "/api/user/image",
+  "/api/users/:email/addresses",
+];
+
+export const staffRoles = ["ADMIN", "OWNER", "SELLER"];
+
+export function matchesRoute(path: string, routes: string[]) {
+  return routes.some((route) => {
+    if (route.includes(":")) {
+      const regex = new RegExp("^" + route.replace(/:[^/]+/g, "[^/]+") + "$", "i");
+      return regex.test(path);
+    }
+    return route === path;
+  });
+}
+
 /**
  * an array of routes that are used for authentication
  * these routes will redirect logged in users to /settings
