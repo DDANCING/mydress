@@ -42,7 +42,7 @@ export async function GET(
   include: {
     buyer: true,
     contractItems: {
-      include: { product: true },
+      include: { product: { include: { category: { include: { billboard: true } } } } },
     },
     paymentMethod: true, // pode manter se quiser mostrar o antigo
     seller: {
@@ -371,15 +371,20 @@ function writeRentalClauses(pdf: jsPDF, contract: any, y: number, pageHeight: nu
   pdf.text("O uso do salto alto é obrigatório desde a primeira prova do vestido.", 40, y);
   y += 25;
 
-  // Cláusula Terceira - De ajustes extras
-  y = checkPageBreak(pdf, y, pageHeight);
-  pdf.setFont("helvetica", "bold");
-  pdf.text("Cláusula Terceira - De ajustes extras", 40, y);
-  y += 30;
-  
-  pdf.setFont("helvetica", "normal");
-  pdf.text("3.2 - Adicionais de materiais como brilhos, bordados e tecidos extras serão cobrados como um serviço extra.", 40, y, { maxWidth: 520 });
-  y += 25;
+  // Cláusula Terceira - De ajustes extras (só para vestidos da coleção Prisma)
+  const isPrisma = contract.contractItems.some((item: any) =>
+    item.product.category?.billboard?.label?.toLowerCase().includes("prisma")
+  );
+  if (isPrisma) {
+    y = checkPageBreak(pdf, y, pageHeight);
+    pdf.setFont("helvetica", "bold");
+    pdf.text("Cláusula Terceira - De ajustes extras", 40, y);
+    y += 30;
+
+    pdf.setFont("helvetica", "normal");
+    pdf.text("3.2 - Adicionais de materiais como brilhos, bordados e tecidos extras serão cobrados como um serviço extra.", 40, y, { maxWidth: 520 });
+    y += 25;
+  }
 
   // Cláusula Quarta - Da autenticidade
   y = checkPageBreak(pdf, y, pageHeight);
@@ -414,7 +419,7 @@ function writeRentalClauses(pdf: jsPDF, contract: any, y: number, pageHeight: nu
   pdf.setFont("helvetica", "normal");
   pdf.text("6.1 - O traje alugado deverá ser devolvido até as 18:00h da data estabelecida.", 40, y);
   y += 15;
-  pdf.text("6.2 - Caso o objeto seja devolvido com excesso de sujeira ou mancha, será cobrada uma taxa de R$500,00 (quinhentos reais).", 40, y, { maxWidth: 520 });
+  pdf.text("6.2 - Caso o objeto seja devolvido com excesso de sujeira ou mancha, será cobrada uma taxa de 10% (dez por cento) do valor de venda do vestido.", 40, y, { maxWidth: 520 });
   y += 30;
   pdf.text("6.3 - A não devolução no prazo de 10 (dez) dias será considerado EXTRAVIO ou ROUBO, sendo que o contratante terá que pagar 03 (três) vezes o valor do aluguel de cada peça.", 40, y, { maxWidth: 520 });
   y += 40;
@@ -853,7 +858,7 @@ function writeClothingRentalClauses(pdf: jsPDF, contract: any, y: number, pageHe
   pdf.setFont("helvetica", "normal");
   pdf.text("6.1 - O traje alugado deverá ser devolvido até as 18:00h da data estabelecida.", 40, y);
   y += 15;
-  pdf.text("6.2 - Caso o objeto seja devolvido com excesso de sujeira ou mancha, será cobrada uma taxa de R$500,00 (quinhentos reais).", 40, y, { maxWidth: 520 });
+  pdf.text("6.2 - Caso o objeto seja devolvido com excesso de sujeira ou mancha, será cobrada uma taxa de 10% (dez por cento) do valor de venda do vestido.", 40, y, { maxWidth: 520 });
   y += 40;
   pdf.text("A não devolução no prazo de 10 dias será considerada EXTRAVIO, e o contratante terá que pagar 03 vezes o valor do aluguel.", 40, y, { maxWidth: 520 });
   y += 40;

@@ -1,0 +1,11 @@
+{
+  "excludes": [
+    ".github/**",
+    ".github",
+    "*.png",
+    "*.jpg",
+    "*.svg",
+    "public/offline.html",
+    "app/(store)/page.txt"
+  ]
+}

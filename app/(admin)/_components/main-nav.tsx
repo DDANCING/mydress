@@ -34,11 +34,6 @@ export function MainNav({ className, userRole }: React.HTMLAttributes<HTMLElemen
         label: "Produtos",
         active: pathname === `/dashboard/store/${params.storeId}/products`
       },
-       {
-        href: `/dashboard/store/${params.storeId}/raw-materials`,
-        label: "Matérias-Primas",
-        active: pathname === `/dashboard/store/${params.storeId}/raw-materials`
-      },
       {
         href: `/dashboard/store/${params.storeId}/billboards`,
         label: "Outdoors",
