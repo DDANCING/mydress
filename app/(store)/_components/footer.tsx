@@ -25,7 +25,7 @@ const columns = [
     links: [
       { href: "/#como-funciona", label: "Como funciona" },
       { href: "/faq", label: "Perguntas frequentes" },
-      { href: "/policies", label: "Política da loja" },
+      { href: "/policies", label: "Privacidade e termos" },
       { href: "/payment-methods", label: "Formas de pagamento" },
       { href: "/contact", label: "Contato" },
     ],

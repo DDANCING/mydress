@@ -1,4 +1,11 @@
+import type { Metadata } from "next";
+import { PrivacyPolicy } from "./_components/privacy-policy";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
+
+export const metadata: Metadata = {
+  title: "Política de Privacidade e Termos de Uso",
+  description: "Como a My Dress Floripa coleta, usa e protege seus dados pessoais, e os termos de venda e locação.",
+};
 
 export default function PoliticasPage() {
   return (
@@ -12,16 +19,19 @@ export default function PoliticasPage() {
               </BreadcrumbItem>
               <BreadcrumbSeparator />
               <BreadcrumbItem>
-                <BreadcrumbPage>Políticas da Loja</BreadcrumbPage>
+                <BreadcrumbPage>Privacidade e Termos</BreadcrumbPage>
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
         </div>
 
-        <div className="max-w-none">
-          <h1 className="text-3xl font-bold text-center mb-8">
+        <h1 className="sr-only">Política de Privacidade e Termos de Uso</h1>
+        <PrivacyPolicy />
+
+        <div id="termos" className="max-w-none scroll-mt-24">
+          <h2 className="text-3xl font-bold text-center mb-8">
             Termos e Condições Gerais de Uso, Venda e Locação
-          </h1>
+          </h2>
           <h2 className="text-xl font-semibold text-center mb-8 text-muted-foreground">
             My Dress Floripa
           </h2>
