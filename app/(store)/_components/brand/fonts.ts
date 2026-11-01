@@ -1,6 +1,7 @@
-import { Bodoni_Moda, Figtree } from "next/font/google";
+import { Figtree, IBM_Plex_Mono, Instrument_Sans } from "next/font/google";
 
-export const displayFont = Bodoni_Moda({
+// Grotesca grande para títulos + mono em caixa alta para rótulos (estilo editorial de boutique)
+export const displayFont = Instrument_Sans({
   subsets: ["latin"],
   style: ["normal", "italic"],
   variable: "--font-display-face",
@@ -13,4 +14,11 @@ export const bodyFont = Figtree({
   display: "swap",
 });
 
-export const storeFontVariables = `${displayFont.variable} ${bodyFont.variable}`;
+export const monoFont = IBM_Plex_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500"],
+  variable: "--font-mono-face",
+  display: "swap",
+});
+
+export const storeFontVariables = `${displayFont.variable} ${bodyFont.variable} ${monoFont.variable}`;

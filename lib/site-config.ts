@@ -40,6 +40,25 @@ export const siteConfig = {
   stateRegistration: "",
   // Preencher quando houver
   email: "",
+  // Frases da faixa que corre no topo da loja
+  announcements: [
+    "Nova coleção exclusiva com Cris Mazzonetto",
+    "Provador em Coqueiros, Florianópolis",
+    "+1.400 avaliações 5 estrelas no Google",
+  ],
+  // Matérias sobre a loja (seção "Na imprensa" da home)
+  press: [
+    {
+      outlet: "Revista KDEA 360",
+      image: "/cmxmydress.png",
+      imageAlt: "Cris Mazzonetto e Dani Scottg, de braços cruzados, sob o título Cris Mazzonetto x My Dress",
+      date: "26 de outubro de 2026",
+      title: "My Dress aposta em parceria com vestidos exclusivos e inaugura nova fase da moda festa em Florianópolis",
+      lead: "Em parceria com a estilista Cris Mazzonetto, a empresária Dani Scottg lança uma coleção de 15 modelos com bordados, pedrarias e acabamento sofisticado.",
+      quote: "A nova linha leva o conceito de exclusividade para o mercado de locação.",
+      url: "https://revistakdea360.com.br/noticia/98397/my-dress-aposta-em-parceria-com-vestidos-exclusivos-e-inaugura-nova-fase-da-moda-festa-em-florianopolis",
+    },
+  ],
   // URL pública do site (defina NEXT_PUBLIC_APP_URL no .env de produção)
   url: normalizeUrl(process.env.NEXT_PUBLIC_APP_URL),
   // Remetente dos e-mails. O domínio precisa estar verificado no Resend (defina EMAIL_FROM no .env).

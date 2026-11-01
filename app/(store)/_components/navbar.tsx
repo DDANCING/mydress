@@ -22,6 +22,7 @@ import useCart from "@/hooks/use-cart";
 import { GlobalSearch } from "@/components/ui/global-search";
 import { NavbarSidebar } from "./navbar-sidebar";
 import { Logo } from "./brand/logo";
+import { siteConfig, whatsappLink } from "@/lib/site-config";
 
 interface UserProps {
   user: {
@@ -88,42 +89,61 @@ export const Navbar = ({ user }: UserProps) => {
           : "border-transparent bg-background"
       )}
     >
-      <nav className="mx-auto flex h-20 max-w-7xl items-center gap-4 px-4 sm:px-6 lg:px-8">
-        <button
-          type="button"
-          className={cn(iconButton, "-ml-2 lg:hidden")}
-          onClick={() => setIsSidebarOpen(true)}
-          aria-label="Abrir menu"
-        >
-          <Menu className="size-5" />
-        </button>
+      {/* Faixa de avisos: duas cópias idênticas para o loop não ter emenda */}
+      <div className="h-7 overflow-hidden bg-plum text-primary-foreground">
+        <div className="store-marquee flex w-max">
+          {[0, 1].map((copy) => (
+            <ul key={copy} aria-hidden={copy === 1} className="flex shrink-0">
+              {[...siteConfig.announcements, ...siteConfig.announcements].map((text, index) => (
+                <li
+                  key={index}
+                  className="flex items-center gap-8 pr-8 font-mono text-[11px] uppercase leading-7 tracking-[0.14em] whitespace-nowrap"
+                >
+                  <span aria-hidden className="text-blush">✦</span>
+                  {text}
+                </li>
+              ))}
+            </ul>
+          ))}
+        </div>
+      </div>
 
-        <Link href="/" className="-my-2" aria-label="My Dress Floripa, página inicial">
-          <Logo size={80} />
+      <nav className="mx-auto grid h-[52px] max-w-[1600px] grid-cols-[1fr_auto_1fr] items-center gap-4 px-4 sm:px-5">
+        <div className="flex items-center">
+          <button
+            type="button"
+            className={cn(iconButton, "-ml-2 lg:hidden")}
+            onClick={() => setIsSidebarOpen(true)}
+            aria-label="Abrir menu"
+          >
+            <Menu className="size-5" />
+          </button>
+
+          <ul className="hidden items-center gap-1.5 lg:flex">
+            {links.map((link) => {
+              const active = link.href !== "/#como-funciona" && pathname.startsWith(link.href);
+              return (
+                <li key={link.href}>
+                  <Link
+                    href={link.href}
+                    className={cn(
+                      "inline-flex h-8 items-center rounded-full px-3.5 font-mono text-[12px] uppercase tracking-[0.08em] transition-colors",
+                      active ? "bg-foreground text-background" : "bg-card hover:bg-secondary"
+                    )}
+                  >
+                    {link.label}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+
+        <Link href="/" aria-label="My Dress Floripa, página inicial">
+          <Logo size={52} />
         </Link>
 
-        <ul className="mx-auto hidden items-center gap-1 lg:flex">
-          {links.map((link) => {
-            const active = link.href !== "/#como-funciona" && pathname.startsWith(link.href);
-            return (
-              <li key={link.href}>
-                <Link
-                  href={link.href}
-                  className={cn(
-                    "rounded-full px-4 py-2 text-[15px] transition-colors",
-                    active
-                      ? "text-primary"
-                      : "text-foreground/80 hover:text-foreground"
-                  )}
-                >
-                  {link.label}
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-
-        <div className="ml-auto flex items-center gap-0.5 lg:ml-0">
+        <div className="flex items-center justify-end gap-0.5">
           {canAccessDashboard && (
             <Link
               href="/dashboard"
@@ -161,6 +181,14 @@ export const Navbar = ({ user }: UserProps) => {
               </span>
             )}
           </Link>
+          <a
+            href={whatsappLink("Olá! Gostaria de agendar uma prova de vestido.")}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="ml-2 hidden h-8 items-center rounded-full bg-foreground px-4 font-mono text-[12px] uppercase tracking-[0.08em] text-background transition-colors hover:bg-primary lg:inline-flex"
+          >
+            Agendar prova
+          </a>
         </div>
       </nav>
 

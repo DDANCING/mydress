@@ -103,7 +103,7 @@ export const Footer = () => {
 
           {columns.map((column) => (
             <nav key={column.title} aria-label={column.title} className="lg:col-span-2">
-              <h3 className="text-sm font-semibold">{column.title}</h3>
+              <h3 className="font-mono text-[12px] uppercase tracking-[0.14em] text-muted-foreground">{column.title}</h3>
               <ul className="mt-4 space-y-3">
                 {column.links.map((link) => (
                   <li key={link.href}>
@@ -117,7 +117,7 @@ export const Footer = () => {
           ))}
 
           <div className="lg:col-span-3">
-            <h3 className="text-sm font-semibold">Fale com a gente</h3>
+            <h3 className="font-mono text-[12px] uppercase tracking-[0.14em] text-muted-foreground">Fale com a gente</h3>
             <ul className="mt-4 space-y-4">
               <li>
                 <a

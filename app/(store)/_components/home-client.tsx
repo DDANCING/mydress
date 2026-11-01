@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { ArrowRight, ArrowUpRight, MapPin } from "lucide-react";
@@ -11,7 +12,7 @@ import { WhatsAppButton } from "@/components/whatsapp-button";
 import { siteConfig, whatsappLink, formatAddress } from "@/lib/site-config";
 import { AnimatedTestimonials } from "./ui/testimonials";
 import { ProductTile } from "./ui/product-tile";
-import { BillboardItem, HeroBillboard } from "./hero-billboard";
+import { Hero } from "./hero";
 import { LogoMark } from "./brand/logo";
 import { useSafeReducedMotion } from "./use-safe-reduced-motion";
 
@@ -25,7 +26,6 @@ type Testimonial = {
 };
 
 interface HomeClientProps {
-  billboardData: BillboardItem[];
   products: StoreProduct[];
   testimonials: Testimonial[];
   firstTestimonialProduct?: StoreProduct;
@@ -77,7 +77,7 @@ const SectionHeading = ({
   </div>
 );
 
-export function HomeClient({ billboardData, products, testimonials }: HomeClientProps) {
+export function HomeClient({ products, testimonials }: HomeClientProps) {
   const reduceMotion = useSafeReducedMotion();
 
   const visibleProducts = useMemo(
@@ -91,7 +91,7 @@ export function HomeClient({ billboardData, products, testimonials }: HomeClient
   }, [visibleProducts]);
 
   const categories = useMemo(() => {
-    const map = new Map<string, { id: string; name: string; count: number }>();
+    const map = new Map<string, { id: string; name: string; count: number; image?: string }>();
     visibleProducts.forEach((product) => {
       if (!product.category?.id) return;
       const current = map.get(product.category.id);
@@ -99,6 +99,7 @@ export function HomeClient({ billboardData, products, testimonials }: HomeClient
         id: product.category.id,
         name: product.category.name,
         count: (current?.count ?? 0) + 1,
+        image: current?.image ?? product.images?.find((img) => !!img?.url)?.url,
       });
     });
     return [...map.values()].sort((a, b) => b.count - a.count).slice(0, 6);
@@ -132,7 +133,7 @@ export function HomeClient({ billboardData, products, testimonials }: HomeClient
     <div className="w-full bg-background text-foreground">
       <WhatsAppButton />
 
-      <HeroBillboard billboards={billboardData} products={visibleProducts} />
+      <Hero categories={categories.filter((category) => category.image).slice(0, 2)} />
 
       {/* Vestidos em destaque */}
       <section className="border-t border-border py-20 lg:py-28">
@@ -281,6 +282,74 @@ export function HomeClient({ billboardData, products, testimonials }: HomeClient
           </div>
         </div>
       </section>
+
+      {/* Na imprensa */}
+      {siteConfig.press.map((article) => (
+        <section key={article.url} className="px-3 pb-20 sm:px-5 lg:pb-28">
+          <motion.article
+            {...reveal}
+            className="mx-auto grid max-w-[1600px] overflow-hidden rounded-[24px] border border-border bg-card lg:grid-cols-12"
+          >
+            {article.image && (
+              <a
+                href={article.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                tabIndex={-1}
+                className="group relative block aspect-[4/5] overflow-hidden lg:col-span-5 lg:aspect-auto lg:min-h-[640px]"
+              >
+                <Image
+                  src={article.image}
+                  alt={article.imageAlt ?? ""}
+                  fill
+                  sizes="(min-width: 1024px) 40vw, 100vw"
+                  className="object-cover object-top transition-transform duration-[900ms] ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.03]"
+                />
+              </a>
+            )}
+            <div className="flex flex-col lg:col-span-7">
+              <div className="flex flex-1 flex-col p-6 sm:p-10 lg:p-14">
+                <p className="font-mono text-[12px] uppercase tracking-[0.14em] text-primary">
+                  Na imprensa · {article.outlet}
+                </p>
+                <h2 className="mt-6 font-display text-3xl leading-[1.05] tracking-[-0.025em] text-balance sm:text-4xl lg:text-5xl">
+                  {article.title}
+                </h2>
+                <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground">{article.lead}</p>
+                <div className="mt-10 flex flex-wrap items-center gap-x-6 gap-y-3 lg:mt-auto lg:pt-10">
+                  <a
+                    href={article.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex h-11 items-center gap-2 rounded-full bg-plum px-5 font-mono text-[12px] uppercase tracking-[0.14em] text-primary-foreground transition-colors hover:bg-primary"
+                  >
+                    Ler matéria completa
+                    <ArrowUpRight className="size-4" />
+                  </a>
+                  <span className="font-mono text-[12px] uppercase tracking-[0.14em] text-muted-foreground">
+                    {article.date}
+                  </span>
+                </div>
+              </div>
+              <div className="grid gap-8 bg-blush p-6 text-plum sm:p-10 lg:grid-cols-[1fr_auto] lg:items-end lg:px-14">
+                <blockquote className="font-display text-2xl italic leading-[1.15] tracking-[-0.02em] sm:text-3xl">
+                  &ldquo;{article.quote}&rdquo;
+                </blockquote>
+                <dl className="flex gap-8">
+                  <div>
+                    <dt className="font-mono text-[11px] uppercase tracking-[0.14em] text-plum/70">Coleção exclusiva</dt>
+                    <dd className="mt-1 font-display text-3xl tracking-[-0.03em] tabular-nums whitespace-nowrap">15 modelos</dd>
+                  </div>
+                  <div>
+                    <dt className="font-mono text-[11px] uppercase tracking-[0.14em] text-plum/70">No Google</dt>
+                    <dd className="mt-1 font-display text-3xl tracking-[-0.03em] tabular-nums whitespace-nowrap">+1.400 ★5</dd>
+                  </div>
+                </dl>
+              </div>
+            </div>
+          </motion.article>
+        </section>
+      ))}
 
       {/* Depoimentos */}
       {testimonials.length > 0 && (

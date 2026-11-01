@@ -33,7 +33,7 @@ export const ProductTile = ({ product, className, priority }: ProductTileProps) 
           </div>
         )}
         {price.isRental && (
-          <span className="absolute left-3 top-3 rounded-full bg-card/90 px-3 py-1 text-xs font-medium text-foreground backdrop-blur-sm">
+          <span className="absolute left-3 top-3 rounded-full bg-card/90 px-3 py-1 font-mono text-[11px] uppercase tracking-[0.12em] text-foreground backdrop-blur-sm">
             Aluguel
           </span>
         )}

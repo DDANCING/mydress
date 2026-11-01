@@ -1,8 +1,5 @@
 
-import { getBillboardData } from "@/actions/getBillboardData";
-import { db } from "@/lib/db";
 import { registerVisitor } from "@/actions/register-visitor";
-import { auth } from "@/auth";
 import { getTestimonials } from "@/actions/get-testimonials";
 import { getProducts } from "@/actions/getProducts";
 import { HomeClient } from "./_components/home-client";
@@ -39,7 +36,6 @@ const storeJsonLd = {
 };
 
 export default async function Home() {
-  const { billboardData } = await getBillboardData();
   await registerVisitor();
   
   let testimonialsRaw = await getTestimonials();
@@ -57,36 +53,6 @@ export default async function Home() {
       : t.product,
   })) ?? [];
   
-  const user = await auth();
-
-  const billboardProductIds = Array.isArray(billboardData)
-    ? billboardData
-        .map(b => b.highlightProduct?.id)
-        .filter((id): id is string => typeof id === "string" && !!id)
-    : [];
-
-  const wishlistItems = await db.wishlist.findMany({
-    where: {
-      userId: user?.user?.id,
-      productId: { in: billboardProductIds },
-    },
-  });
-
-  const wishlistProductIds = new Set(wishlistItems.map(item => item.productId));
-
-  const billboardWithWishlist = billboardData.map((item) => ({
-    ...item,
-    highlightProduct: item.highlightProduct
-      ? {
-          ...item.highlightProduct,
-          isInWishlist: wishlistProductIds.has(item.highlightProduct.id),
-          siteVisible: item.highlightProduct.siteVisible ?? true,
-          rentalValue: item.highlightProduct.rentalValue ?? 0,
-          isOnlyRental: item.highlightProduct.isOnlyRental ?? false,
-        }
-      : null,
-  }));
-
   const ProductsRaw = await getProducts({ name: "" });
   // Converte todos os campos Decimal para number
   const Products = Array.isArray(ProductsRaw)
@@ -128,7 +94,6 @@ export default async function Home() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(storeJsonLd).replace(/</g, "\\u003c") }}
       />
       <HomeClient
-        billboardData={billboardWithWishlist}
         products={Products}
         testimonials={testimonials}
         firstTestimonialProduct={firstTestimonialProduct}
