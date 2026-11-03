@@ -5,7 +5,8 @@ import ColorGrid from "./_components/ColorGrid";
 
 export const metadata = {
   title: "Cores",
-  description: "Descubra a paleta de cores da My Dress Floripa. Envio rápido e atendimento personalizado.",
+  description: "Vestidos de festa para alugar em Florianópolis por cor. Escolha online e prove no provador em Coqueiros.",
+  alternates: { canonical: "/color" },
 };
 
 export default async function ColorsPage() {

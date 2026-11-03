@@ -1,3 +1,5 @@
+import type { Metadata } from "next";
+import { siteConfig } from "@/lib/site-config";
 import { db } from "@/lib/db";
 import ProductCard from "../../_components/ui/product-card";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
@@ -6,6 +8,20 @@ interface  ColorIdPageProps {
   params: Promise<{ colorId: string }>
 }
 
+
+export async function generateMetadata({ params }: ColorIdPageProps): Promise<Metadata> {
+  const { colorId } = await params;
+  const color = await db.color.findUnique({ where: { id: colorId }, select: { name: true } });
+  if (!color) return { title: "Cor não encontrada", robots: { index: false } };
+  const title = `Aluguel de vestido ${color.name.toLowerCase()} em ${siteConfig.city}`;
+  const description = `Vestidos de festa na cor ${color.name.toLowerCase()} para alugar na ${siteConfig.fullName}. Prove no provador em ${siteConfig.address.district}, ${siteConfig.city}.`;
+  return {
+    title,
+    description,
+    alternates: { canonical: `/color/${colorId}` },
+    openGraph: { url: `/color/${colorId}`, title, description },
+  };
+}
 
 export default async function ColorPage({ params }: ColorIdPageProps) {
 

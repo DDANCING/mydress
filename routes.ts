@@ -47,7 +47,6 @@ export const publicRoutes = [
   "/faq",
   "/payment-methods",
   "/contact",
-  "/design-preview",
 ];
 /**
  * APIs que qualquer cliente logada pode usar (cada rota confere se o dado é dela).

@@ -4,7 +4,8 @@ import CategoryGrid from "./_components/CategoryGrid";
 
 export const metadata = {
   title: "Categorias",
-  description: "Encontre seu produto pela categoria. Envio rápido e atendimento personalizado.",
+  description: "Vestidos de festa para alugar em Florianópolis por categoria: madrinha, formatura, casamento e mais.",
+  alternates: { canonical: "/category" },
 };
 
 export default async function CategoriesPage() {

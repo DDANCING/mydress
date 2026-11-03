@@ -1,3 +1,5 @@
+import type { Metadata } from "next";
+import { siteConfig } from "@/lib/site-config";
 import { db } from "@/lib/db";
 import ProductCard from "../../_components/ui/product-card";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
@@ -6,6 +8,20 @@ interface  CategoryIdPageProps {
   params: Promise<{ categoryId: string }>
 }
 
+
+export async function generateMetadata({ params }: CategoryIdPageProps): Promise<Metadata> {
+  const { categoryId } = await params;
+  const category = await db.category.findUnique({ where: { id: categoryId }, select: { name: true } });
+  if (!category) return { title: "Categoria não encontrada", robots: { index: false } };
+  const title = `Aluguel de vestidos ${category.name.toLowerCase()} em ${siteConfig.city}`;
+  const description = `Vestidos ${category.name.toLowerCase()} para alugar na ${siteConfig.fullName}. Escolha online e prove no provador em ${siteConfig.address.district}, ${siteConfig.city}.`;
+  return {
+    title,
+    description,
+    alternates: { canonical: `/category/${categoryId}` },
+    openGraph: { url: `/category/${categoryId}`, title, description },
+  };
+}
 
 export default async function CategoriesPage({ params }: CategoryIdPageProps) {
 

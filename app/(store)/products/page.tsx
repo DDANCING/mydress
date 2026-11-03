@@ -4,8 +4,10 @@ import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbP
 import { auth } from "@/auth";
 
 export const metadata = {
-  title: "Produtos",
-  description: "Encontre seu vestido ideal. Envio rápido e atendimento personalizado.",
+  title: "Vestidos para alugar",
+  description: "Catálogo de vestidos de festa para alugar em Florianópolis: madrinhas, formaturas, casamentos e eventos. Prove no provador em Coqueiros.",
+  // Busca (?name=) aponta para o catálogo principal, evitando conteúdo duplicado
+  alternates: { canonical: "/products" },
 };
 
 export default async function ProductsPage(props: any) {
