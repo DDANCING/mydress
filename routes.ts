@@ -35,18 +35,14 @@ export const publicRoutes = [
   "/api/synapse/docs",
   "/api/n8n/functions/activate-buyers",
   "/api/n8n/functions/get-non-effected-buyers",
-  "/cart",
-  "/products",
-  "/product/:productId",
-  "/category/:categoryId",
-  "/color/:colorId",
-  "/category",
-  "/color",
-  "/bio",  
+  "/acervo",
+  "/ocasioes",
+  "/ocasioes/:slug",
+  "/colecao-cris-mazzonetto",
+  "/experiencia",
+  "/agendar",
+  "/bio",
   "/policies",
-  "/faq",
-  "/payment-methods",
-  "/contact",
 ];
 /**
  * APIs que qualquer cliente logada pode usar (cada rota confere se o dado é dela).
@@ -97,7 +93,8 @@ export const apiAuthPrefix = "/api/auth";
 
 /**
  * the default redirect route path after logging in
+ * O site público não tem área de cliente: a equipe cai no painel e o layout do painel devolve quem não é da equipe para a home.
  * @type {string}
  */
 
-export const DEFAULT_LOGIN_REDIRECT = "/";
+export const DEFAULT_LOGIN_REDIRECT = "/dashboard";

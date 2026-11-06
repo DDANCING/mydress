@@ -16,7 +16,7 @@ const montserrat = Montserrat({ subsets: ["latin"] });
 
 const title = "My Dress Floripa | Aluguel de vestidos de festa em Florianópolis";
 const description =
-  "Aluguel de vestidos de festa em Florianópolis. Vestidos para madrinhas, formaturas, casamentos e eventos. Escolha online e prove no nosso provador em Coqueiros.";
+  "Aluguel de vestidos de festa em Florianópolis. Vestidos para madrinhas, formandas e convidadas, com atendimento individual e hora marcada em Coqueiros.";
 
 // IDs do Google e verificações vêm do .env para não depender de contas antigas
 const googleAnalyticsId = process.env.NEXT_PUBLIC_GA_ID;
@@ -140,7 +140,7 @@ export default async function RootLayout({
         </head>
         <body className={montserrat.className} suppressHydrationWarning>
           <NextTopLoader
-            color="#b8196f"
+            color="#c4a47c"
             initialPosition={0.08}
             crawlSpeed={200}
             height={3}
@@ -148,7 +148,7 @@ export default async function RootLayout({
             showSpinner={false}
             easing="ease"
             speed={200}
-            shadow="0 0 10px #b8196f,0 0 5px #b8196f" />
+            shadow="0 0 10px #c4a47c,0 0 5px #c4a47c" />
           
           <ThemeProvider
             attribute="class"

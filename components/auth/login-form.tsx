@@ -91,7 +91,7 @@ export const LoginForm = () => {
   return (
     <CardWrapper
       headerLabel="Que bom te ver de novo"
-      description="Entre para ver seus favoritos e acompanhar seus aluguéis."
+      description="Entre para acessar o painel da loja."
       backButtonLabel={showTwoFactor ? "" : "Não tem conta? Criar conta"}
       backButtonHref="/auth/register"
       showSocial

@@ -19,6 +19,25 @@ const nextConfig = {
       hostname,
     })),
   },
+  // A compra online saiu do site público: links antigos e do Google levam para a página equivalente.
+  redirects: async () => [
+    ...[
+      ["/products", "/acervo"],
+      ["/product/:id", "/acervo"],
+      ["/color", "/acervo"],
+      ["/color/:id", "/acervo"],
+      ["/category", "/ocasioes"],
+      ["/category/:id", "/ocasioes"],
+      ["/contact", "/agendar"],
+      ["/faq", "/agendar"],
+      ["/payment-methods", "/agendar"],
+      ["/cart", "/"],
+      ["/wishlist", "/"],
+      ["/order/:path*", "/"],
+      ["/profile/:path*", "/"],
+      ["/testimonials/:path*", "/"],
+    ].map(([source, destination]) => ({ source, destination, permanent: true })),
+  ],
   headers: async () => [
     { source: "/(.*)", headers: securityHeaders },
   ],

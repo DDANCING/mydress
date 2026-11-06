@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { ArrowUpRight, Download, MapPin, ShoppingBag } from 'lucide-react';
+import { ArrowUpRight, Download, MapPin, Shirt } from 'lucide-react';
 import { FaInstagram, FaWhatsapp } from 'react-icons/fa';
 
 import { siteConfig, whatsappLink } from '@/lib/site-config';
@@ -28,9 +28,9 @@ const links = [
     primary: true,
   },
   {
-    href: '/products',
-    icon: <ShoppingBag className="size-5" />,
-    label: 'Ver vestidos para alugar',
+    href: '/acervo',
+    icon: <Shirt className="size-5" />,
+    label: 'Ver o acervo',
     external: false,
   },
   {

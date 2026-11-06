@@ -7,6 +7,9 @@ import { headers } from "next/headers";
 import { subDays, format } from "date-fns"
 
 export async function registerVisitor() {
+  // O .env local aponta para o banco de produção: desenvolvimento não pode contar como visita
+  if (process.env.NODE_ENV !== "production") return;
+
   const now = new Date();
   const start = startOfDay(now);
   const end = endOfDay(now);
