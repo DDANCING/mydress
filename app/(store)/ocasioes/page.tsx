@@ -34,7 +34,7 @@ export default function OccasionsPage() {
                   <span className="block font-display text-4xl transition-colors group-hover:text-terracotta sm:text-5xl">{occasion.name}</span>
                   <span className="mt-2 block max-w-md text-muted-foreground">{occasion.summary}</span>
                 </span>
-                <span className="col-span-2 text-[11px] font-normal uppercase tracking-[0.22em] text-muted-foreground sm:col-span-1">
+                <span className="col-span-2 text-[11px] uppercase tracking-[0.22em] text-muted-foreground sm:col-span-1">
                   {count > 0 ? `${count} vestidos` : `${occasion.photos.length + 1} fotos`}
                 </span>
               </Link>

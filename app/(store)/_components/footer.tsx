@@ -1,13 +1,37 @@
+import Image from "next/image";
 import Link from "next/link";
 
-import { occasions, openingHours } from "@/lib/site-content";
+import { looks, occasions, openingHours } from "@/lib/site-content";
 import { formatAddress, siteConfig, whatsappLink } from "@/lib/site-config";
 import { LogoMark } from "./brand/logo";
+import { Kicker } from "./site-ui";
 
-const headingClass = "text-[11px] font-normal uppercase tracking-[0.25em] text-gold";
+const headingClass = "text-[11px] uppercase tracking-[0.25em] text-gold";
 const linkClass = "transition-colors hover:text-gold";
 
+const instagramLooks = ["camelo-capa-frente", "terracota-ombro-frente", "chocolate-plissado-frente", "azul-tule-frente"]
+  .map((id) => looks.find((look) => look.id === id))
+  .filter((look) => look !== undefined);
+
 export const Footer = () => (
+  <>
+  <section className="mx-auto w-full max-w-[1440px] px-4 py-16 sm:px-8 lg:px-12">
+    <div className="flex flex-wrap items-end justify-between gap-5">
+      <Kicker>Veja mais no Instagram</Kicker>
+      <a href={siteConfig.instagram.url} target="_blank" rel="noopener noreferrer" className="border-b border-gold pb-1 font-display text-3xl transition-colors hover:text-terracotta sm:text-4xl">
+        {siteConfig.instagram.handle}
+      </a>
+    </div>
+    <ul className="mt-6 grid grid-cols-2 gap-2 lg:grid-cols-4 lg:gap-3">
+      {instagramLooks.map((look) => (
+        <li key={look.id}>
+          <a href={siteConfig.instagram.url} target="_blank" rel="noopener noreferrer" aria-label={`${look.name} no Instagram`} className="group relative block aspect-square overflow-hidden bg-muted">
+            <Image src={look.photo.src} alt="" fill sizes="(min-width: 1024px) 25vw, 50vw" className="object-cover object-top transition-transform duration-700 group-hover:scale-105" />
+          </a>
+        </li>
+      ))}
+    </ul>
+  </section>
   <footer className="bg-night text-sand/75">
     <div className="mx-auto grid max-w-[1440px] gap-12 px-4 pb-24 pt-16 sm:px-8 md:grid-cols-2 lg:grid-cols-12 lg:px-12">
       <div className="lg:col-span-4">
@@ -57,4 +81,5 @@ export const Footer = () => (
       </div>
     </div>
   </footer>
+  </>
 );

@@ -91,6 +91,7 @@ export const occasions: Occasion[] = [
       photo("civ-7", "Vestido branco com decote nas costas, junto a uma janela"),
       photo("civ-1", "Casal sorrindo, noiva de vestido acetinado branco"),
       photo("civ-3", "Casal em frente a uma porta antiga, noiva de vestido nude"),
+      photo("civ-4", "Casal de branco e bege caminhando de mãos dadas junto a um arco de flores"),
       photo("civ-5", "Casal ao entardecer, noiva de vestido branco de mangas longas"),
       photo("civ-2", "Casal diante da Torre Eiffel, noiva de vestido branco"),
     ],
@@ -219,9 +220,20 @@ export const looks: Look[] = [
   look("gal-17", "Coral fluido", "Tomara que caia com camadas assimétricas", "vermelho", ["madrinhas"]),
   look("gal-20", "Preto em camadas", "Amarração lateral e saia de tule em camadas", "preto", ["formandas"]),
   look("gal-12", "Cinza com brilho", "Tomara que caia drapeado com echarpe", "prata", ["convidadas"]),
+  look("gal-04", "Esmeralda com brilho", "Alças finas, decote V e saia ampla brilhante", "verde", ["formandas", "madrinhas"]),
+  look("gal-08", "Petróleo acetinado", "Tomara que caia com drapeado e saia ampla", "azul", ["formandas", "convidadas"]),
+  look("gal-11", "Vermelho drapeado", "Tomara que caia com corpete drapeado e saia fluida", "vermelho", ["madrinhas", "convidadas"]),
+  look("gal-23", "Preto em tule com fenda", "Alças finas, saia em camadas e fenda alta", "preto", ["formandas"]),
+  look("gal-24", "Verde-água acetinado", "Decote reto, alças finas e saia ampla", "verde", ["madrinhas", "formandas"]),
 ];
 
 export const looksFor = (slug: OccasionSlug) => looks.filter((item) => item.occasions.includes(slug));
+
+// Galeria "Novidades que chegaram": as fotos do acervo que vieram da galeria do site antigo
+export const galleryPhotos = looks
+  .filter((item) => item.id.startsWith("gal-"))
+  .sort((a, b) => a.id.localeCompare(b.id))
+  .map((item) => item.photo);
 
 export const experiencePhotos = {
   salon: photo("exp-2", "Salão da My Dress, com araras de vestidos organizadas por cor"),
@@ -240,7 +252,7 @@ export const team = {
 
 export const heroPhotos = {
   detail: photo("hero-camelo-detalhe", "Detalhe do corset e da capa do vestido caramelo"),
-  body: photo("camelo-capa-frente-bg", "Modelo com vestido sereia caramelo de capa longa"),
+  body: photo("hero-camelo-corpo", "Modelo com vestido sereia caramelo de capa longa"),
 };
 
 export const backdrops = {
@@ -259,12 +271,22 @@ export const steps = [
 ];
 
 export const reviews = [
-  "Se eu pudesse dar mais de 5 estrelas, daria sem pensar duas vezes! A My Dress Floripa superou todas as minhas expectativas.",
-  "Atendimento impecável. As meninas são uns amores e têm toda paciência para nos ajudar a escolher o vestido ideal.",
-  "Experiência maravilhosa! O atendimento foi impecável do início ao fim. O ambiente é requintado e acolhedor.",
+  "Se eu pudesse dar mais de 5 estrelas, daria sem pensar duas vezes! A My Dress Floripa superou todas as minhas expectativas. Desde o primeiro atendimento até a escolha final do vestido, tudo foi absolutamente impecável.",
+  "Atendimento impecável. As meninas são uns amores e têm toda paciência para nos ajudar a escolher o vestido ideal. Meu vestido estava PERFEITO, parece que foi feito pra mim.",
+  "A melhor experiência! Fui recebida com muito carinho e atenção. Minhas necessidades e desejos foram ouvidos quanto às expectativas do vestido para a ocasião.",
+  "Experiência maravilhosa! O atendimento foi impecável do início ao fim, com muito cuidado, atenção e profissionalismo. O ambiente é requintado e acolhedor.",
 ];
+
+export const experienceQuote = "Atendimento impecável do começo ao fim. Saí com o vestido dos meus sonhos e me senti única.";
+export const founderQuote = "A Dani foi super atenciosa, me senti em um dia de princesa.";
 
 export const googleReviewsUrl =
   "https://www.google.com/maps/search/?api=1&query=My+Dress+Floripa+Coqueiros+Florian%C3%B3polis";
+
+export const directionsUrl =
+  "https://www.google.com/maps/dir/?api=1&destination=R.+Sen.+Milton+Campos%2C+265%2C+Coqueiros%2C+Florian%C3%B3polis%2C+SC";
+
+export const mapEmbedUrl =
+  "https://www.google.com/maps?q=R.%20Sen.%20Milton%20Campos%2C%20265%2C%20Coqueiros%2C%20Florian%C3%B3polis%2C%20SC%2C%2088080-110&output=embed";
 
 export const openingHours = "Segunda a sábado, das 9h às 18h";

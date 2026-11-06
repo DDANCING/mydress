@@ -30,7 +30,7 @@ const Chip = ({ href, active, children }: { href: string; active: boolean; child
     scroll={false}
     aria-current={active ? "true" : undefined}
     className={cn(
-      "inline-flex min-h-10 shrink-0 items-center gap-2 border px-4 text-sm font-normal transition-colors",
+      "inline-flex min-h-10 shrink-0 items-center gap-2 border px-4 text-sm transition-colors",
       active ? "border-ink bg-ink text-sand" : "border-input hover:border-ink",
     )}
   >
@@ -69,7 +69,7 @@ export default async function CollectionPage({ searchParams }: { searchParams: P
       <section className="mx-auto max-w-[1440px] px-4 py-10 sm:px-8 lg:px-12 lg:py-14">
         <div className="space-y-5">
           <div className="sm:flex sm:items-center sm:gap-5">
-            <h2 className="mb-2 w-20 shrink-0 text-[11px] font-normal uppercase tracking-[0.22em] text-muted-foreground sm:mb-0">Ocasião</h2>
+            <h2 className="mb-2 w-20 shrink-0 text-[11px] uppercase tracking-[0.22em] text-muted-foreground sm:mb-0">Ocasião</h2>
             <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 sm:mx-0 sm:flex-wrap sm:px-0">
               <Chip href={hrefWith(filters, { ocasiao: undefined })} active={!ocasiao}>Todas</Chip>
               {occasions.filter(({ slug }) => looks.some((look) => look.occasions.includes(slug))).map(({ slug, name }) => (
@@ -79,7 +79,7 @@ export default async function CollectionPage({ searchParams }: { searchParams: P
             </div>
           </div>
           <div className="sm:flex sm:items-center sm:gap-5">
-            <h2 className="mb-2 w-20 shrink-0 text-[11px] font-normal uppercase tracking-[0.22em] text-muted-foreground sm:mb-0">Cor</h2>
+            <h2 className="mb-2 w-20 shrink-0 text-[11px] uppercase tracking-[0.22em] text-muted-foreground sm:mb-0">Cor</h2>
             <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 sm:mx-0 sm:flex-wrap sm:px-0">
               <Chip href={hrefWith(filters, { cor: undefined })} active={!cor}>Todas</Chip>
               {colors.map(({ slug, name, swatch }) => (
