@@ -13,12 +13,35 @@ const securityHeaders = [
 const nextConfig = {
   poweredByHeader: false,
   images: {
+    // AVIF primeiro (menor), WebP para navegadores sem suporte
+    formats: ["image/avif", "image/webp"],
+    // As fotos do site não mudam de URL sem mudar de nome: cache longo no otimizador
+    minimumCacheTTL: 60 * 60 * 24 * 30,
     // Só HTTPS e só estes hosts podem passar pelo otimizador de imagens
     remotePatterns: ["i.imgur.com", "utfs.io", "res.cloudinary.com", "placehold.co"].map((hostname) => ({
       protocol: "https",
       hostname,
     })),
   },
+  // A compra online saiu do site público: links antigos e do Google levam para a página equivalente.
+  redirects: async () => [
+    ...[
+      ["/products", "/acervo"],
+      ["/product/:id", "/acervo"],
+      ["/color", "/acervo"],
+      ["/color/:id", "/acervo"],
+      ["/category", "/ocasioes"],
+      ["/category/:id", "/ocasioes"],
+      ["/contact", "/agendar"],
+      ["/faq", "/agendar"],
+      ["/payment-methods", "/agendar"],
+      ["/cart", "/"],
+      ["/wishlist", "/"],
+      ["/order/:path*", "/"],
+      ["/profile/:path*", "/"],
+      ["/testimonials/:path*", "/"],
+    ].map(([source, destination]) => ({ source, destination, permanent: true })),
+  ],
   headers: async () => [
     { source: "/(.*)", headers: securityHeaders },
   ],

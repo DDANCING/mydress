@@ -1,171 +1,85 @@
-"use client";
-
-import { useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, Loader2, MapPin } from "lucide-react";
-import { FaInstagram, FaWhatsapp } from "react-icons/fa";
-import { toast } from "sonner";
 
-import { subscribeToNewsletter } from "@/actions/newsletter";
-import { siteConfig, whatsappLink, formatAddress } from "@/lib/site-config";
-import { Logo } from "./brand/logo";
+import { looks, occasions, openingHours } from "@/lib/site-content";
+import { formatAddress, siteConfig, whatsappLink } from "@/lib/site-config";
+import { LogoMark } from "./brand/logo";
+import { Kicker } from "./site-ui";
 
-const columns = [
-  {
-    title: "Loja",
-    links: [
-      { href: "/products", label: "Todos os vestidos" },
-      { href: "/category", label: "Ocasiões" },
-      { href: "/color", label: "Cores" },
-      { href: "/wishlist", label: "Favoritos" },
-    ],
-  },
-  {
-    title: "Ajuda",
-    links: [
-      { href: "/#como-funciona", label: "Como funciona" },
-      { href: "/faq", label: "Perguntas frequentes" },
-      { href: "/policies", label: "Privacidade e termos" },
-      { href: "/payment-methods", label: "Formas de pagamento" },
-      { href: "/contact", label: "Contato" },
-    ],
-  },
-];
+const headingClass = "text-[11px] uppercase tracking-[0.25em] text-gold";
+const linkClass = "transition-colors hover:text-gold";
 
-export const Footer = () => {
-  const [email, setEmail] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+const instagramLooks = ["camelo-capa-frente", "terracota-ombro-frente", "chocolate-plissado-frente", "azul-tule-frente"]
+  .map((id) => looks.find((look) => look.id === id))
+  .filter((look) => look !== undefined);
 
-  const handleNewsletterSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
-
-    if (!email || !email.includes("@")) {
-      toast.error("Digite um e-mail válido, como nome@email.com.");
-      return;
-    }
-
-    setIsLoading(true);
-
-    try {
-      const result = await subscribeToNewsletter(email);
-
-      if (result.error) {
-        toast.error(result.error);
-        return;
-      }
-
-      toast.success("Pronto! Você vai receber as novidades da My Dress.");
-      setEmail("");
-    } catch (error) {
-      console.error("Erro ao cadastrar na newsletter:", error);
-      toast.error("Não conseguimos cadastrar seu e-mail agora. Tente de novo em instantes.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  return (
-    <footer className="border-t border-border bg-muted/60 text-foreground">
-      <div className="mx-auto max-w-7xl px-4 pb-8 pt-16 sm:px-6 lg:px-8 lg:pt-20">
-        <div className="grid gap-12 lg:grid-cols-12">
-          <div className="lg:col-span-5">
-            <Link href="/" className="-ml-3 -mt-6 inline-block" aria-label="My Dress Floripa, página inicial">
-              <Logo size={140} />
-            </Link>
-            <p className="mt-0 max-w-sm leading-relaxed text-muted-foreground">{siteConfig.tagline}.</p>
-
-            <form onSubmit={handleNewsletterSubmit} className="mt-8 max-w-sm">
-              <label htmlFor="newsletter-email" className="text-[15px] font-medium">
-                Receba os lançamentos primeiro
-              </label>
-              <div className="mt-3 flex items-center gap-2 rounded-full border border-border bg-card p-1.5 focus-within:border-primary">
-                <input
-                  id="newsletter-email"
-                  type="email"
-                  placeholder="seu@email.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  disabled={isLoading}
-                  autoComplete="email"
-                  className="min-w-0 flex-1 bg-transparent px-3 text-[15px] placeholder:text-muted-foreground focus:outline-none"
-                />
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="inline-flex h-10 items-center gap-1.5 rounded-full bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {isLoading ? <Loader2 className="size-4 animate-spin" /> : <ArrowRight className="size-4" />}
-                  {isLoading ? "Enviando" : "Quero"}
-                </button>
-              </div>
-            </form>
-          </div>
-
-          {columns.map((column) => (
-            <nav key={column.title} aria-label={column.title} className="lg:col-span-2">
-              <h3 className="font-mono text-[12px] uppercase tracking-[0.14em] text-muted-foreground">{column.title}</h3>
-              <ul className="mt-4 space-y-3">
-                {column.links.map((link) => (
-                  <li key={link.href}>
-                    <Link href={link.href} className="text-muted-foreground transition-colors hover:text-primary">
-                      {link.label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </nav>
-          ))}
-
-          <div className="lg:col-span-3">
-            <h3 className="font-mono text-[12px] uppercase tracking-[0.14em] text-muted-foreground">Fale com a gente</h3>
-            <ul className="mt-4 space-y-4">
-              <li>
-                <a
-                  href={whatsappLink("Olá! Vim pelo site da My Dress.")}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group flex items-center gap-3"
-                >
-                  <FaWhatsapp className="size-5 text-[#1f9d55]" />
-                  <span className="text-muted-foreground group-hover:text-foreground tabular-nums">
-                    {siteConfig.whatsapp.display}
-                  </span>
-                </a>
-              </li>
-              <li>
-                <a
-                  href={siteConfig.instagram.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group flex items-center gap-3"
-                >
-                  <FaInstagram className="size-5 text-primary" />
-                  <span className="text-muted-foreground group-hover:text-foreground">{siteConfig.instagram.handle}</span>
-                </a>
-              </li>
-              <li>
-                <a
-                  href={siteConfig.address.mapsUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group flex items-start gap-3"
-                >
-                  <MapPin className="mt-0.5 size-5 shrink-0 text-foreground" />
-                  <span className="text-muted-foreground group-hover:text-foreground">{formatAddress()}</span>
-                </a>
-              </li>
-            </ul>
-          </div>
-        </div>
-
-        <div className="mt-16 flex flex-col gap-3 border-t border-border pt-6 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-          <p>
-            © {new Date().getFullYear()} {siteConfig.legalName || siteConfig.fullName}
-            {siteConfig.cnpj && ` · CNPJ ${siteConfig.cnpj}`}
-          </p>
-          <p>Pagamento seguro com cartão, Pix e boleto.</p>
-        </div>
+export const Footer = () => (
+  <>
+  <section className="mx-auto w-full max-w-[1440px] px-4 py-16 sm:px-8 lg:px-12">
+    <div className="flex flex-wrap items-end justify-between gap-5">
+      <Kicker>Veja mais no Instagram</Kicker>
+      <a href={siteConfig.instagram.url} target="_blank" rel="noopener noreferrer" className="border-b border-gold pb-1 font-display text-3xl transition-colors hover:text-terracotta sm:text-4xl">
+        {siteConfig.instagram.handle}
+      </a>
+    </div>
+    <ul className="mt-6 grid grid-cols-2 gap-2 lg:grid-cols-4 lg:gap-3">
+      {instagramLooks.map((look) => (
+        <li key={look.id}>
+          <a href={siteConfig.instagram.url} target="_blank" rel="noopener noreferrer" aria-label={`${look.name} no Instagram`} className="group relative block aspect-square overflow-hidden bg-muted">
+            <Image src={look.photo.src} alt="" fill sizes="(min-width: 1024px) 25vw, 50vw" className="object-cover object-top transition-transform duration-700 group-hover:scale-105" />
+          </a>
+        </li>
+      ))}
+    </ul>
+  </section>
+  <footer className="bg-night text-sand/75">
+    <div className="mx-auto grid max-w-[1440px] gap-12 px-4 pb-24 pt-16 sm:px-8 md:grid-cols-2 lg:grid-cols-12 lg:px-12">
+      <div className="lg:col-span-4">
+        <LogoMark className="size-20 text-sand" />
+        <p className="mt-4 font-display text-3xl text-sand">{siteConfig.fullName}</p>
+        <p className="mt-2 max-w-xs">{siteConfig.tagline}</p>
       </div>
-    </footer>
-  );
-};
+
+      <div className="lg:col-span-2">
+        <h2 className={headingClass}>Ocasiões</h2>
+        <ul className="mt-5 space-y-2.5">
+          {occasions.map((occasion) => (
+            <li key={occasion.slug}>
+              <Link href={`/ocasioes/${occasion.slug}`} className={linkClass}>{occasion.name}</Link>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <div className="lg:col-span-2">
+        <h2 className={headingClass}>O site</h2>
+        <ul className="mt-5 space-y-2.5">
+          <li><Link href="/colecao-cris-mazzonetto" className={linkClass}>Coleção Cris Mazzonetto</Link></li>
+          <li><Link href="/acervo" className={linkClass}>Acervo</Link></li>
+          <li><Link href="/experiencia" className={linkClass}>Experiência</Link></li>
+          <li><Link href="/agendar" className={linkClass}>Agendar</Link></li>
+          <li><Link href="/policies" className={linkClass}>Privacidade e termos</Link></li>
+        </ul>
+      </div>
+
+      <div className="lg:col-span-4">
+        <h2 className={headingClass}>Visite</h2>
+        <address className="mt-5 space-y-2.5 not-italic">
+          <p><a href={siteConfig.address.mapsUrl} target="_blank" rel="noopener noreferrer" className={linkClass}>{formatAddress()}</a></p>
+          <p>{openingHours}</p>
+          <p><a href={whatsappLink()} target="_blank" rel="noopener noreferrer" className={linkClass}>{siteConfig.whatsapp.display}</a></p>
+          <p><a href={siteConfig.instagram.url} target="_blank" rel="noopener noreferrer" className={linkClass}>{siteConfig.instagram.handle}</a></p>
+        </address>
+      </div>
+    </div>
+
+    <div className="border-t border-sand/10">
+      <div className="mx-auto flex max-w-[1440px] flex-col gap-2 px-4 py-6 pr-36 text-sm text-sand/60 sm:flex-row sm:items-center sm:justify-between sm:px-8 sm:pr-40 lg:px-12 lg:pr-40">
+        <p>© {new Date().getFullYear()} {siteConfig.legalName} · CNPJ {siteConfig.cnpj}</p>
+        {/* Sem sessão, o /dashboard leva ao login e volta para o painel */}
+        <Link href="/dashboard" prefetch={false} className={linkClass}>Área da equipe</Link>
+      </div>
+    </div>
+  </footer>
+  </>
+);

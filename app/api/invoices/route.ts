@@ -217,6 +217,7 @@ const items = (itemsTaxDetails ?? []).map((taxDetails: any, idx: number) => {
 
     const basicAuth = Buffer.from(`${focusConfig.token}:`).toString('base64');
     const res = await fetch(endpoint, {
+      signal: AbortSignal.timeout(30_000), // Focus NFe fora do ar não pode prender a função
       method: 'POST',
       headers: {
         'Authorization': `Basic ${basicAuth}`,

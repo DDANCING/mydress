@@ -53,6 +53,7 @@ export async function POST(
     const focusResponse = await fetch(
       `${FOCUS_NFE_BASE_URL}/v2/nfe/${focusReference}`,
       {
+        signal: AbortSignal.timeout(30_000),
         method: 'GET',
         headers: {
           'Authorization': `Basic ${Buffer.from(`${FOCUS_NFE_TOKEN}:`).toString('base64')}`,

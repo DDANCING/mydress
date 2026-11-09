@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useState } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { ArrowUpRight, Download, MapPin, ShoppingBag } from 'lucide-react';
+import { ArrowUpRight, Download, MapPin, Shirt } from 'lucide-react';
 import { FaInstagram, FaWhatsapp } from 'react-icons/fa';
 
 import { siteConfig, whatsappLink } from '@/lib/site-config';
+import { backdrops } from '@/lib/site-content';
 import { LogoMark } from '../_components/brand/logo';
 
 const container = {
@@ -28,9 +30,9 @@ const links = [
     primary: true,
   },
   {
-    href: '/products',
-    icon: <ShoppingBag className="size-5" />,
-    label: 'Ver vestidos para alugar',
+    href: '/acervo',
+    icon: <Shirt className="size-5" />,
+    label: 'Ver o acervo',
     external: false,
   },
   {
@@ -71,14 +73,17 @@ export default function BioPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-secondary/60 px-4 pb-16 pt-28">
+    <div className="relative isolate flex min-h-screen items-center justify-center bg-night px-4 pb-16 pt-28 text-sand">
+      {/* Foto de fundo com véu escuro: os botões claros e o texto continuam legíveis */}
+      <Image src={backdrops.caramel.src} alt="" fill preload sizes="100vw" className="-z-10 object-cover object-[50%_20%] lg:object-top" />
+      <div aria-hidden className="absolute inset-0 -z-10 bg-gradient-to-b from-night/70 via-night/55 to-night/85" />
       <motion.div variants={container} initial="initial" animate="animate" className="w-full max-w-sm text-center">
         <motion.div variants={item} className="flex flex-col items-center">
           <span className="flex size-20 items-center justify-center rounded-full bg-card">
             <LogoMark className="size-11 text-primary" />
           </span>
           <h1 className="mt-5 font-display text-4xl tracking-[-0.02em]">{siteConfig.fullName}</h1>
-          <p className="mt-2 text-muted-foreground">{siteConfig.tagline}</p>
+          <p className="mt-2 text-sand/75">{siteConfig.tagline}</p>
         </motion.div>
 
         <ul className="mt-10 space-y-3">
@@ -105,7 +110,7 @@ export default function BioPage() {
             <motion.li variants={item}>
               <button
                 onClick={handleInstall}
-                className="flex h-14 w-full items-center gap-3 rounded-full border border-border px-5 text-foreground transition-colors hover:bg-card"
+                className="flex h-14 w-full items-center gap-3 rounded-full border border-sand/40 px-5 text-sand transition-colors hover:bg-sand/10"
               >
                 <Download className="size-5" />
                 <span className="flex-1 text-left font-medium">Adicionar à tela inicial</span>
@@ -114,7 +119,7 @@ export default function BioPage() {
           )}
         </ul>
 
-        <motion.p variants={item} className="mt-12 text-sm text-muted-foreground">
+        <motion.p variants={item} className="mt-12 text-sm text-sand/60">
           © {new Date().getFullYear()} {siteConfig.fullName}
         </motion.p>
       </motion.div>

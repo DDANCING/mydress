@@ -1,15 +1,17 @@
-import { Figtree, IBM_Plex_Mono, Instrument_Sans } from "next/font/google";
+import { IBM_Plex_Mono, Instrument_Serif, Jost } from "next/font/google";
 
-// Grotesca grande para títulos + mono em caixa alta para rótulos (estilo editorial de boutique)
-export const displayFont = Instrument_Sans({
+// Serifada editorial para títulos + Jost leve para textos (identidade do site institucional)
+export const displayFont = Instrument_Serif({
   subsets: ["latin"],
+  weight: "400",
   style: ["normal", "italic"],
   variable: "--font-display-face",
   display: "swap",
 });
 
-export const bodyFont = Figtree({
+export const bodyFont = Jost({
   subsets: ["latin"],
+  weight: ["300", "400", "500"],
   variable: "--font-body-face",
   display: "swap",
 });
@@ -19,6 +21,7 @@ export const monoFont = IBM_Plex_Mono({
   weight: ["400", "500"],
   variable: "--font-mono-face",
   display: "swap",
+  preload: false,
 });
 
 export const storeFontVariables = `${displayFont.variable} ${bodyFont.variable} ${monoFont.variable}`;

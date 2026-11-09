@@ -6,17 +6,16 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import NextTopLoader from 'nextjs-toploader';
 import { SpeedInsights } from '@vercel/speed-insights/next';
-import { SessionProvider } from "next-auth/react";
-import { auth } from "@/auth";
 import { Analytics } from "@vercel/analytics/next"
 import Script from 'next/script';
 import { siteConfig } from "@/lib/site-config";
 
-const montserrat = Montserrat({ subsets: ["latin"] });
+// Fonte só do painel: o site usa Jost/Instrument Serif, então não pré-carrega nas páginas públicas
+const montserrat = Montserrat({ subsets: ["latin"], preload: false });
 
 const title = "My Dress Floripa | Aluguel de vestidos de festa em Florianópolis";
 const description =
-  "Aluguel de vestidos de festa em Florianópolis. Vestidos para madrinhas, formaturas, casamentos e eventos. Escolha online e prove no nosso provador em Coqueiros.";
+  "Aluguel de vestidos de festa em Florianópolis. Vestidos para madrinhas, formandas e convidadas, com atendimento individual e hora marcada em Coqueiros.";
 
 // IDs do Google e verificações vêm do .env para não depender de contas antigas
 const googleAnalyticsId = process.env.NEXT_PUBLIC_GA_ID;
@@ -109,15 +108,12 @@ export const viewport: Viewport = {
   themeColor: "#fbf7f2",
 };
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const session = await auth();
-
   return (
-  <SessionProvider session={session}>
       <html lang="pt-br" suppressHydrationWarning>
         <head>
           {/* Google Analytics / Google Ads: só carrega se NEXT_PUBLIC_GA_ID ou NEXT_PUBLIC_GOOGLE_ADS_ID estiverem no .env */}
@@ -140,7 +136,7 @@ export default async function RootLayout({
         </head>
         <body className={montserrat.className} suppressHydrationWarning>
           <NextTopLoader
-            color="#b8196f"
+            color="#c4a47c"
             initialPosition={0.08}
             crawlSpeed={200}
             height={3}
@@ -148,7 +144,7 @@ export default async function RootLayout({
             showSpinner={false}
             easing="ease"
             speed={200}
-            shadow="0 0 10px #b8196f,0 0 5px #b8196f" />
+            shadow="0 0 10px #c4a47c,0 0 5px #c4a47c" />
           
           <ThemeProvider
             attribute="class"
@@ -164,6 +160,5 @@ export default async function RootLayout({
           </ThemeProvider>
         </body>
       </html>
-    </SessionProvider>
   );
 }

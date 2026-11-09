@@ -1,8 +1,10 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { FaInstagram } from "react-icons/fa";
 
 import { cn } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
 import { siteConfig } from "@/lib/site-config";
 import { storeFontVariables } from "@/app/(store)/_components/brand/fonts";
 import { StoreThemeBody } from "@/app/(store)/_components/brand/store-theme-body";
@@ -22,15 +24,15 @@ const AuthLayout = ({ children }: { children: React.ReactNode }) => {
           className="relative inline-flex w-fit items-center gap-2 text-sm text-primary-foreground/80 transition-colors hover:text-primary-foreground"
         >
           <ArrowLeft className="size-4" />
-          Voltar para a loja
+          Voltar para o site
         </Link>
 
         <div className="relative">
           <h2 className="max-w-md font-display text-5xl leading-[1.05] tracking-[-0.02em] text-balance xl:text-6xl">
-            Seu próximo vestido de festa começa aqui
+            Área da equipe My Dress
           </h2>
           <p className="mt-6 max-w-sm text-lg leading-relaxed text-primary-foreground/75">
-            Salve seus favoritos, acompanhe seus aluguéis e reserve o vestido para a data da sua festa.
+            Agenda, contratos e financeiro da loja em um só lugar.
           </p>
         </div>
 
@@ -56,12 +58,15 @@ const AuthLayout = ({ children }: { children: React.ReactNode }) => {
             className="inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground lg:hidden"
           >
             <ArrowLeft className="size-4" />
-            Voltar para a loja
+            Voltar para o site
           </Link>
         </div>
 
         <div className="flex flex-1 items-center justify-center py-10">
-          <div className="w-full max-w-sm">{children}</div>
+          <div className="w-full max-w-sm">
+            {/* Os formulários leem a URL (useSearchParams): o resto da página sai estático e o formulário entra em seguida */}
+            <Suspense fallback={<FormSkeleton />}>{children}</Suspense>
+          </div>
         </div>
 
         <p className="text-center text-sm text-muted-foreground">
@@ -71,5 +76,14 @@ const AuthLayout = ({ children }: { children: React.ReactNode }) => {
     </div>
   );
 };
+
+const FormSkeleton = () => (
+  <div aria-busy="true" aria-label="Carregando" className="space-y-4">
+    <Skeleton className="h-8 w-2/3" />
+    <Skeleton className="h-10 w-full" />
+    <Skeleton className="h-10 w-full" />
+    <Skeleton className="h-10 w-full" />
+  </div>
+);
 
 export default AuthLayout;
