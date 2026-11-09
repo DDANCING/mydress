@@ -87,6 +87,7 @@ export async function POST(
 
     // Fazer a requisição para o Focus NFe
     const response = await fetch(url, {
+      signal: AbortSignal.timeout(30_000), // Focus NFe fora do ar não pode prender a função
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

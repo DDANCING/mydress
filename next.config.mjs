@@ -13,6 +13,10 @@ const securityHeaders = [
 const nextConfig = {
   poweredByHeader: false,
   images: {
+    // AVIF primeiro (menor), WebP para navegadores sem suporte
+    formats: ["image/avif", "image/webp"],
+    // As fotos do site não mudam de URL sem mudar de nome: cache longo no otimizador
+    minimumCacheTTL: 60 * 60 * 24 * 30,
     // Só HTTPS e só estes hosts podem passar pelo otimizador de imagens
     remotePatterns: ["i.imgur.com", "utfs.io", "res.cloudinary.com", "placehold.co"].map((hostname) => ({
       protocol: "https",

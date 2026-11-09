@@ -358,6 +358,7 @@ model Order {
 
   @@index([buyerId])
   @@index([couponId])
+  @@index([createdAt])
 }
 
 model OrderItem {
@@ -470,6 +471,8 @@ model OutFinanceColumn {
   method    String
   value     Decimal
   createdAt DateTime @default(now())
+
+  @@index([data])
 }
 
 model ContractPayment {

@@ -64,6 +64,7 @@ export async function DELETE(
 
     const basicAuth = Buffer.from(`${focusConfig.token}:`).toString('base64');
     const res = await fetch(endpoint, {
+      signal: AbortSignal.timeout(30_000), // Focus NFe fora do ar não pode prender a função
       method: 'DELETE',
       headers: {
         'Authorization': `Basic ${basicAuth}`,

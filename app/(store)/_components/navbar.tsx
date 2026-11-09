@@ -1,16 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
+import { LogoMark } from "./brand/logo";
 
 const links = [
   { href: "/ocasioes", label: "Ocasiões" },
-  { href: "/colecao-cris-mazzonetto", label: "Coleção Cris" },
   { href: "/acervo", label: "Acervo" },
   { href: "/ocasioes/cha-revelacao", label: "Chá revelação" },
   { href: "/experiencia", label: "Experiência" },
@@ -18,7 +17,7 @@ const links = [
 ];
 
 // Páginas que começam em fundo claro: o menu já nasce com fundo, sem transparência
-const lightTopPages = ["/policies", "/bio"];
+const lightTopPages = ["/policies"];
 
 export const Navbar = () => {
   const pathname = usePathname();
@@ -46,7 +45,7 @@ export const Navbar = () => {
     >
       <nav aria-label="Principal" className="mx-auto flex h-[70px] max-w-[1440px] items-center justify-between gap-3 px-[18px] lg:h-20 lg:gap-6 lg:px-12">
         <Link href="/" className="flex min-w-0 items-center gap-3" aria-label="My Dress Floripa, página inicial">
-          <Image src="/site/logo-my-dress.webp" alt="" width={40} height={40} className="size-[34px] object-cover lg:size-10" />
+          <LogoMark className="size-[42px] lg:size-12" />
           <span className="truncate text-[11px] uppercase tracking-[0.2em] lg:hidden xl:inline">My Dress Floripa</span>
         </Link>
 

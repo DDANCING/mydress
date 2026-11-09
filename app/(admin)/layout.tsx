@@ -3,6 +3,7 @@ import { RoleGate } from "@/components/auth/role-gate";
 import { db } from "@/lib/db";
 import { UserRole } from "@prisma/client";
 import { redirect } from "next/navigation";
+import { SessionProvider } from "next-auth/react";
 import React from 'react';
 import Script from 'next/script';
 import NavBar from "@/app/(admin)/_components/admin-navbar";
@@ -40,12 +41,14 @@ export default async function DashboardLayout({
 
 
   return (
-    <RoleGate allowedRoles={[UserRole.ADMIN, UserRole.SELLER, UserRole.OWNER]}>
-      <NavBar />
-      <BuyerModalProvider />
-      <ModalProvider />
-      <SettingsModalProvider />
-      {children}
-    </RoleGate>
+    <SessionProvider session={user}>
+      <RoleGate allowedRoles={[UserRole.ADMIN, UserRole.SELLER, UserRole.OWNER]}>
+        <NavBar />
+        <BuyerModalProvider />
+        <ModalProvider />
+        <SettingsModalProvider />
+        {children}
+      </RoleGate>
+    </SessionProvider>
   );
 }

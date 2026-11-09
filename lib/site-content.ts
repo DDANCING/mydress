@@ -259,6 +259,7 @@ export const backdrops = {
   blue: photo("azul-tule-frente-bg", ""),
   black: photo("preto-fenda-frente-bg", ""),
   terracotta: photo("terracota-ombro-frente-bg", ""),
+  caramel: photo("camelo-capa-frente-bg", ""),
 };
 
 export const crisPortrait = photo("cris-dani", "Cris Mazzonetto e Dani Scott Garcia, de braços cruzados");

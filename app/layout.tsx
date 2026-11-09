@@ -6,13 +6,12 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import NextTopLoader from 'nextjs-toploader';
 import { SpeedInsights } from '@vercel/speed-insights/next';
-import { SessionProvider } from "next-auth/react";
-import { auth } from "@/auth";
 import { Analytics } from "@vercel/analytics/next"
 import Script from 'next/script';
 import { siteConfig } from "@/lib/site-config";
 
-const montserrat = Montserrat({ subsets: ["latin"] });
+// Fonte só do painel: o site usa Jost/Instrument Serif, então não pré-carrega nas páginas públicas
+const montserrat = Montserrat({ subsets: ["latin"], preload: false });
 
 const title = "My Dress Floripa | Aluguel de vestidos de festa em Florianópolis";
 const description =
@@ -109,15 +108,12 @@ export const viewport: Viewport = {
   themeColor: "#fbf7f2",
 };
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const session = await auth();
-
   return (
-  <SessionProvider session={session}>
       <html lang="pt-br" suppressHydrationWarning>
         <head>
           {/* Google Analytics / Google Ads: só carrega se NEXT_PUBLIC_GA_ID ou NEXT_PUBLIC_GOOGLE_ADS_ID estiverem no .env */}
@@ -164,6 +160,5 @@ export default async function RootLayout({
           </ThemeProvider>
         </body>
       </html>
-    </SessionProvider>
   );
 }

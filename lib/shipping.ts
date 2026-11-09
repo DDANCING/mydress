@@ -100,7 +100,7 @@ async function getCoordsFromCep(cep: string) {
     `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
       `${address.localidade},${address.uf},Brasil`
     )}`,
-    { headers: { "User-Agent": "MyDressFloripa/1.0 (Frete Calculator)" }, cache: "force-cache" }
+    { headers: { "User-Agent": "MyDressFloripa/1.0 (Frete Calculator)" }, cache: "force-cache", signal: AbortSignal.timeout(10_000) }
   );
   const [place] = await geo.json();
   if (!place) throw new Error(`Coordenadas não encontradas para: ${address.localidade}-${address.uf}`);

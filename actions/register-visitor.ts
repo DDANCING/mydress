@@ -4,56 +4,61 @@ import { db } from "@/lib/db";
 import { assertStaff } from "@/lib/auth";
 import { startOfDay, endOfDay } from "date-fns";
 import { headers } from "next/headers";
+import { after } from "next/server";
 import { subDays, format } from "date-fns"
 
 export async function registerVisitor() {
   // O .env local aponta para o banco de produção: desenvolvimento não pode contar como visita
   if (process.env.NODE_ENV !== "production") return;
 
-  const now = new Date();
-  const start = startOfDay(now);
-  const end = endOfDay(now);
-
+  // O user-agent é lido durante o render; headers() não pode ser chamado dentro do after() em Server Components
   const userAgent = (await headers()).get("user-agent") || "";
-
   const isMobile = /mobile/i.test(userAgent);
 
-  // Verifica se já existe registro para hoje
-  const existing = await db.visitor.findFirst({
-    where: {
-      date: {
-        gte: start,
-        lte: end,
-      },
-    },
-  });
+  // Grava depois de enviar a página: a visitante não espera o banco para ver a home
+  after(async () => {
+    const now = new Date();
+    const start = startOfDay(now);
+    const end = endOfDay(now);
 
-  if (existing) {
-    await db.visitor.update({
-      where: { id: existing.id },
-      data: {
-        mobile: isMobile ? { increment: 1 } : undefined,
-        web: !isMobile ? { increment: 1 } : undefined,
-      },
-    });
-  } else {
-    await db.visitor.create({
-      data: {
-        date: now,
-        mobile: isMobile ? 1 : 0,
-        web: isMobile ? 0 : 1,
-      },
-    });
-
-    const ninetyDaysAgo = subDays(now, 90);
-    await db.visitor.deleteMany({
+    // Verifica se já existe registro para hoje
+    const existing = await db.visitor.findFirst({
+      select: { id: true },
       where: {
         date: {
-          lt: ninetyDaysAgo,
+          gte: start,
+          lte: end,
         },
       },
     });
-  }
+
+    if (existing) {
+      await db.visitor.update({
+        where: { id: existing.id },
+        data: {
+          mobile: isMobile ? { increment: 1 } : undefined,
+          web: !isMobile ? { increment: 1 } : undefined,
+        },
+      });
+    } else {
+      await db.visitor.create({
+        data: {
+          date: now,
+          mobile: isMobile ? 1 : 0,
+          web: isMobile ? 0 : 1,
+        },
+      });
+
+      const ninetyDaysAgo = subDays(now, 90);
+      await db.visitor.deleteMany({
+        where: {
+          date: {
+            lt: ninetyDaysAgo,
+          },
+        },
+      });
+    }
+  });
 }
 
 type TimeRange = "7d" | "30d" | "90d"

@@ -1,8 +1,10 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { FaInstagram } from "react-icons/fa";
 
 import { cn } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
 import { siteConfig } from "@/lib/site-config";
 import { storeFontVariables } from "@/app/(store)/_components/brand/fonts";
 import { StoreThemeBody } from "@/app/(store)/_components/brand/store-theme-body";
@@ -61,7 +63,10 @@ const AuthLayout = ({ children }: { children: React.ReactNode }) => {
         </div>
 
         <div className="flex flex-1 items-center justify-center py-10">
-          <div className="w-full max-w-sm">{children}</div>
+          <div className="w-full max-w-sm">
+            {/* Os formulários leem a URL (useSearchParams): o resto da página sai estático e o formulário entra em seguida */}
+            <Suspense fallback={<FormSkeleton />}>{children}</Suspense>
+          </div>
         </div>
 
         <p className="text-center text-sm text-muted-foreground">
@@ -71,5 +76,14 @@ const AuthLayout = ({ children }: { children: React.ReactNode }) => {
     </div>
   );
 };
+
+const FormSkeleton = () => (
+  <div aria-busy="true" aria-label="Carregando" className="space-y-4">
+    <Skeleton className="h-8 w-2/3" />
+    <Skeleton className="h-10 w-full" />
+    <Skeleton className="h-10 w-full" />
+    <Skeleton className="h-10 w-full" />
+  </div>
+);
 
 export default AuthLayout;

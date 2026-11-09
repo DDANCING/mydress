@@ -112,6 +112,7 @@ export async function GET(
       const consultaUrl = `${focusConfig.baseUrl}/v2/nfe/${encodeURIComponent(chaveToUse)}?completa=1`;
       
       const consultaResponse = await fetch(consultaUrl, {
+      signal: AbortSignal.timeout(30_000),
         method: 'GET',
         headers: {
           'Authorization': `Basic ${Buffer.from(`${focusConfig.token}:`).toString('base64')}`,
@@ -171,6 +172,7 @@ export async function GET(
 
     // Fazer requisição para o FocusNFe
     const response = await fetch(url, {
+      signal: AbortSignal.timeout(30_000),
       method: 'GET',
       headers: {
         'Authorization': `Basic ${Buffer.from(`${focusConfig.token}:`).toString('base64')}`,
