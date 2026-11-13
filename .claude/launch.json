@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "old-site",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-I", "-m", "http.server", "4599", "--bind", "127.0.0.1", "--directory", "C:\\Users\\Marcm\\Downloads\\u172746528.20261023233358\\domains\\mydressfloripa.com.br\\public_html"],
+      "port": 4599
+    },
+    {
+      "name": "store-dev",
+      "runtimeExecutable": "bun",
+      "runtimeArgs": ["run", "dev"],
+      "port": 3000
+    }
+  ]
+}
